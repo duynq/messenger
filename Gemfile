@@ -22,6 +22,7 @@ gem "aws-sdk-s3", "~> 1.0", require: false
 
 # Utilities
 gem "activesupport"
+gem "redis", "~> 5.0"
 
 group :development, :test do
   gem "debug", platforms: %i[mri mingw x64_mingw]

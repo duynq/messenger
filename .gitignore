@@ -33,3 +33,6 @@ minio_data/
 
 # RSpec
 spec/examples.txt
+
+# Antigravity IDE
+.antigravity
