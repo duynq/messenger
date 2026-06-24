@@ -57,16 +57,11 @@ sed -i '' "s/myapp-files/${NEW_NAME_KEBAB}-files/" config/storage.yml
 # ── Frontend ───────────────────────────────────────────────
 
 # App title in layout
-sed -i '' "s/title: \"MyApp\"/title: \"${NEW_NAME_TITLE}\"/" frontend/src/app/layout.tsx
+sed -i '' "s/title: 'MyApp'/title: '${NEW_NAME_TITLE}'/" frontend/src/app/\[locale\]/layout.tsx
 
-# Branding in login page
-sed -i '' "s/MyApp/${NEW_NAME_TITLE}/g" frontend/src/app/login/page.tsx
-
-# Branding in register page
-sed -i '' "s/MyApp/${NEW_NAME_TITLE}/g" frontend/src/app/register/page.tsx
-
-# Nav branding
-sed -i '' "s/MyApp/${NEW_NAME_TITLE}/g" frontend/src/components/layout/AppNav.tsx
+# Branding in messages (i18n)
+sed -i '' "s/MyApp/${NEW_NAME_TITLE}/g" frontend/messages/en.json
+sed -i '' "s/MyApp/${NEW_NAME_TITLE}/g" frontend/messages/vi.json
 
 echo ""
 echo "✅ Project renamed to '${NEW_NAME_TITLE}' successfully!"

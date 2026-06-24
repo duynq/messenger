@@ -48,11 +48,13 @@ base-template/
 ├── frontend/
 │   ├── src/
 │   │   ├── actions/         # Next.js Server Actions (auth, account)
-│   │   ├── app/             # App Router pages
+│   │   ├── app/             # App Router pages ([locale]/...)
 │   │   ├── components/      # UI + Layout components
 │   │   ├── hooks/           # Custom React hooks
+│   │   ├── i18n/            # next-intl config (routing, request, navigation)
 │   │   ├── lib/             # Server API client, Zod schemas
-│   │   └── middleware.ts    # Auth route protection
+│   │   └── middleware.ts    # Auth + i18n route protection
+│   ├── messages/            # en.json / vi.json translations
 │   ├── tailwind.config.ts   # Design system
 │   └── package.json
 ├── scripts/
@@ -149,10 +151,14 @@ render json: {
 #### Server API Client
 ```typescript
 // src/lib/server-api.ts
-import { serverFetch, handleUnauthorized } from '@/lib/server-api';
+// serverFetch automatically attaches JWT token + Accept-Language header.
+// Base URL (http://web:3000/api/v1) is set via API_URL_INTERNAL env var.
+import { serverFetchJson } from '@/lib/server-api';
 
-const response = await serverFetch('/api/v1/posts');
-await handleUnauthorized(response); // Auto-redirect to /login on 401
+// In a Server Component or Server Action:
+const data = await serverFetchJson<MyType>('/posts');       // GET /api/v1/posts
+const data = await serverFetchJson<MyType>('/posts/1');     // GET /api/v1/posts/1
+// Automatically redirects to /login on 401 Unauthorized.
 ```
 
 #### Zod Validation
@@ -205,8 +211,12 @@ end
 
 ### Step 5: Add Route
 ```ruby
-# config/routes.rb
-resources :products, only: [:index, :show, :create, :update, :destroy]
+# config/routes.rb — inside namespace :api > :v1
+namespace :api do
+  namespace :v1 do
+    resources :products, only: [:index, :show, :create, :update, :destroy]
+  end
+end
 ```
 
 ### Step 6: Add Tests
@@ -223,7 +233,23 @@ docker compose exec web bundle exec rspec
 
 ### Frontend
 ```bash
+docker compose exec frontend npm test
+# or locally:
 cd frontend && npm test
+```
+
+## 📚 API Documentation (Swagger)
+
+This template includes auto-generated Swagger (OpenAPI 3) documentation using the `rswag` gem.
+
+**1. View the API Docs**
+Once the server is running, visit:
+👉 **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
+
+**2. Generate / Update Docs**
+The Swagger JSON/YAML is generated from the RSpec test files located in `spec/requests/api/...`. To regenerate the `swagger.yaml` file after making changes, run:
+```bash
+docker compose exec web bundle exec rake rswag:specs:swaggerize
 ```
 
 ## 📋 Included Features
@@ -233,6 +259,7 @@ cd frontend && npm test
 - ✅ CORS configuration
 - ✅ Rate limiting (Rack::Attack)
 - ✅ API pagination
+- ✅ Swagger API Documentation (`rswag`)
 - ✅ Blueprinter serialization
 - ✅ Result pattern for service objects
 - ✅ Dark theme with glassmorphism UI

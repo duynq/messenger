@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  mount Rswag::Ui::Engine => '/api-docs'
+  mount Rswag::Api::Engine => '/api-docs'
   # ──────────────────────────────────────────────
   # Authentication (Devise + JWT)
   # ──────────────────────────────────────────────
@@ -14,10 +16,6 @@ Rails.application.routes.draw do
       # Dashboard
       get "dashboard", to: "dashboard#index"
 
-      # ──────────────────────────────────────────
-      # Example resource — replace with your own
-      # ──────────────────────────────────────────
-      resources :posts, only: [:index, :show, :create, :update, :destroy]
 
       # Account management
       resource :account, only: [:update, :destroy]
