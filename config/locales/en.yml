@@ -1,0 +1,8 @@
+en:
+  errors:
+    internal: "An internal server error occurred"
+    not_found: "Record not found"
+    unprocessable: "Validation failed"
+    bad_request: "Bad request"
+    too_many_requests: "Too many requests. Please try again later."
+    unauthorized: "Unauthorized"

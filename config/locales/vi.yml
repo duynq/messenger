@@ -1,0 +1,8 @@
+vi:
+  errors:
+    internal: "Đã xảy ra lỗi máy chủ nội bộ"
+    not_found: "Không tìm thấy bản ghi"
+    unprocessable: "Xác thực dữ liệu thất bại"
+    bad_request: "Yêu cầu không hợp lệ"
+    too_many_requests: "Quá nhiều yêu cầu. Vui lòng thử lại sau."
+    unauthorized: "Không có quyền truy cập"

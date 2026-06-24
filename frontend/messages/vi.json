@@ -1,0 +1,89 @@
+{
+  "common": {
+    "appName": "MyApp",
+    "loading": "Đang tải...",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "tryAgain": "Thử lại",
+    "backToDashboard": "Về trang chủ"
+  },
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "settings": "Cài đặt",
+    "signOut": "Đăng xuất",
+    "storageUsed": "Đã dùng {size}"
+  },
+  "auth": {
+    "welcomeBack": "Chào mừng trở lại",
+    "signInSubtitle": "Đăng nhập vào tài khoản của bạn.",
+    "signIn": "Đăng nhập",
+    "createAccount": "Tạo tài khoản",
+    "signUpSubtitle": "Đăng ký để bắt đầu.",
+    "joinApp": "Tham gia MyApp",
+    "brandTagline": "Ứng dụng full-stack cao cấp, bảo mật. Xây dựng cho web hiện đại.",
+    "registerTagline": "Tạo tài khoản và bắt đầu xây dựng điều tuyệt vời.",
+    "noAccount": "Chưa có tài khoản?",
+    "createOne": "Tạo ngay",
+    "hasAccount": "Đã có tài khoản?",
+    "email": "Địa chỉ email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "passwordMin": "Mật khẩu (tối thiểu 6 ký tự)",
+    "loginFailed": "Đăng nhập thất bại",
+    "registrationFailed": "Đăng ký thất bại",
+    "tokenMissing": "Không nhận được token xác thực",
+    "registrationNoToken": "Đăng ký thành công nhưng thiếu token. Vui lòng đăng nhập.",
+    "unexpectedError": "Đã xảy ra lỗi không mong muốn"
+  },
+  "dashboard": {
+    "welcome": "Chào mừng trở lại, {name}",
+    "overview": "Đây là tổng quan bảng điều khiển của bạn.",
+    "statDashboard": "Bảng điều khiển",
+    "statActive": "Hoạt động",
+    "statResources": "Tài nguyên",
+    "statReady": "Sẵn sàng",
+    "statAccount": "Tài khoản",
+    "starterTitle": "Ứng dụng của bạn bắt đầu từ đây",
+    "starterDescription": "Đây là bảng điều khiển mẫu. Thay thế nội dung này bằng các component và dữ liệu của riêng bạn.",
+    "loadFailed": "Không thể tải bảng điều khiển"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "accountInfo": "Thông tin tài khoản",
+    "name": "Tên",
+    "email": "Email",
+    "editProfile": "Chỉnh sửa hồ sơ",
+    "updateSuccess": "Cập nhật hồ sơ thành công",
+    "updateFailed": "Cập nhật thất bại",
+    "deleteFailed": "Xóa thất bại",
+    "extendHint": "Mở rộng trang này với form chỉnh sửa hồ sơ, đổi mật khẩu và xóa tài khoản.",
+    "loadFailed": "Không thể tải cài đặt"
+  },
+  "errors": {
+    "title": "Đã xảy ra lỗi",
+    "unexpected": "Đã xảy ra lỗi không mong muốn.",
+    "notFoundTitle": "Không tìm thấy trang",
+    "notFoundDescription": "Trang bạn đang tìm không tồn tại hoặc đã được di chuyển.",
+    "globalTitle": "Lỗi ứng dụng",
+    "globalDescription": "Đã xảy ra lỗi nghiêm trọng. Vui lòng thử lại."
+  },
+  "validation": {
+    "invalid": "Dữ liệu không hợp lệ",
+    "invalidEmail": "Email không hợp lệ",
+    "passwordRequired": "Vui lòng nhập mật khẩu",
+    "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự",
+    "passwordConfirmRequired": "Vui lòng xác nhận mật khẩu",
+    "passwordMismatch": "Mật khẩu không khớp",
+    "firstNameRequired": "Vui lòng nhập tên",
+    "lastNameRequired": "Vui lòng nhập họ",
+    "invalidLogin": "Thông tin đăng nhập không hợp lệ",
+    "invalidRegistration": "Thông tin đăng ký không hợp lệ"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  }
+}

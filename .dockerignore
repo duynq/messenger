@@ -1,0 +1,10 @@
+.git
+.gitignore
+log/*
+tmp/*
+storage/*
+node_modules
+postgres_data
+minio_data
+.env
+spec/examples.txt

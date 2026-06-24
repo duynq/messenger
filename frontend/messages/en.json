@@ -1,0 +1,89 @@
+{
+  "common": {
+    "appName": "MyApp",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "tryAgain": "Try Again",
+    "backToDashboard": "Back to Dashboard"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "signOut": "Sign Out",
+    "storageUsed": "{size} used"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "signInSubtitle": "Sign in to your account.",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "signUpSubtitle": "Sign up to get started.",
+    "joinApp": "Join MyApp",
+    "brandTagline": "A premium, secure full-stack application. Built for the modern web.",
+    "registerTagline": "Create your account and start building something amazing.",
+    "noAccount": "Don't have an account?",
+    "createOne": "Create one now",
+    "hasAccount": "Already have an account?",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "passwordMin": "Password (min 6 characters)",
+    "loginFailed": "Login failed",
+    "registrationFailed": "Registration failed",
+    "tokenMissing": "Authentication token missing from response",
+    "registrationNoToken": "Registration successful but missing token. Please log in.",
+    "unexpectedError": "An unexpected error occurred"
+  },
+  "dashboard": {
+    "welcome": "Welcome back, {name}",
+    "overview": "Here's your dashboard overview.",
+    "statDashboard": "Dashboard",
+    "statActive": "Active",
+    "statResources": "Resources",
+    "statReady": "Ready",
+    "statAccount": "Account",
+    "starterTitle": "Your App Starts Here",
+    "starterDescription": "This is a skeleton dashboard. Replace this content with your own components and data.",
+    "loadFailed": "Failed to load dashboard"
+  },
+  "settings": {
+    "title": "Settings",
+    "accountInfo": "Account Information",
+    "name": "Name",
+    "email": "Email",
+    "editProfile": "Edit Profile",
+    "updateSuccess": "Profile updated successfully",
+    "updateFailed": "Update failed",
+    "deleteFailed": "Delete failed",
+    "extendHint": "Extend this page with profile editing, password change, and account deletion forms.",
+    "loadFailed": "Failed to load settings"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "unexpected": "An unexpected error occurred.",
+    "notFoundTitle": "Page Not Found",
+    "notFoundDescription": "The page you are looking for does not exist or has been moved.",
+    "globalTitle": "Application Error",
+    "globalDescription": "A critical error occurred. Please try again."
+  },
+  "validation": {
+    "invalid": "Invalid input",
+    "invalidEmail": "Invalid email address",
+    "passwordRequired": "Password is required",
+    "passwordMin": "Password must be at least 6 characters",
+    "passwordConfirmRequired": "Password confirmation is required",
+    "passwordMismatch": "Passwords do not match",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "invalidLogin": "Invalid login details",
+    "invalidRegistration": "Invalid registration details"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  }
+}
