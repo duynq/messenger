@@ -271,6 +271,10 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
+    redis (5.4.1)
+      redis-client (>= 0.22.0)
+    redis-client (0.30.0)
+      connection_pool
     reline (0.6.3)
       io-console (~> 0.5)
     responders (3.2.0)
@@ -347,6 +351,7 @@ DEPENDENCIES
   rack-attack (~> 6.8)
   rack-cors
   rails (~> 7.1.0)
+  redis (~> 5.0)
   rspec-rails (~> 6.0)
   rswag-api
   rswag-specs

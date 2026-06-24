@@ -25,5 +25,9 @@ Rails.application.configure do
   config.active_record.migration_error = :page_load
   config.active_record.verbose_query_logs = true
   config.hosts.clear
+
+  # ActionCable config
+  config.action_cable.url = "ws://localhost:3000/cable"
+  config.action_cable.allowed_request_origins = [ /http:\/\/(localhost|127\.0\.0\.1):300[0-9]/ ]
 end
 Rails.application.routes.default_url_options = { host: 'localhost', port: 3000 }
