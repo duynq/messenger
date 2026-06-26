@@ -5,7 +5,8 @@
     "save": "Lưu",
     "cancel": "Hủy",
     "tryAgain": "Thử lại",
-    "backToDashboard": "Về trang chủ"
+    "backToDashboard": "Về trang chủ",
+    "close": "Đóng"
   },
   "nav": {
     "dashboard": "Bảng điều khiển",
