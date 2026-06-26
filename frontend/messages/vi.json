@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "MyApp",
+    "appName": "Messenger",
     "loading": "Đang tải...",
     "save": "Lưu",
     "cancel": "Hủy",
@@ -10,8 +10,7 @@
   "nav": {
     "dashboard": "Bảng điều khiển",
     "settings": "Cài đặt",
-    "signOut": "Đăng xuất",
-    "storageUsed": "Đã dùng {size}"
+    "signOut": "Đăng xuất"
   },
   "auth": {
     "welcomeBack": "Chào mừng trở lại",
@@ -19,7 +18,7 @@
     "signIn": "Đăng nhập",
     "createAccount": "Tạo tài khoản",
     "signUpSubtitle": "Đăng ký để bắt đầu.",
-    "joinApp": "Tham gia MyApp",
+    "joinApp": "Tham gia Messenger",
     "brandTagline": "Ứng dụng full-stack cao cấp, bảo mật. Xây dựng cho web hiện đại.",
     "registerTagline": "Tạo tài khoản và bắt đầu xây dựng điều tuyệt vời.",
     "noAccount": "Chưa có tài khoản?",

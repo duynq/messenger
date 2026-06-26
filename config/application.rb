@@ -4,7 +4,7 @@ require "rails/all"
 
 Bundler.require(*Rails.groups)
 
-module MyApp
+module Messenger
   class Application < Rails::Application
     config.load_defaults 7.1
     config.api_only = true
@@ -14,7 +14,7 @@ module MyApp
     config.autoload_lib(ignore: %w[assets tasks])
     config.active_storage.variant_processor = :mini_magick
     # Devise requires sessions
-    config.session_store :cookie_store, key: '_myapp_session'
+    config.session_store :cookie_store, key: '_messenger_session', secure: Rails.env.production?, httponly: true, same_site: :lax
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use config.session_store, config.session_options
 

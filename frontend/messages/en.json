@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "MyApp",
+    "appName": "Messenger",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -10,8 +10,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "settings": "Settings",
-    "signOut": "Sign Out",
-    "storageUsed": "{size} used"
+    "signOut": "Sign Out"
   },
   "auth": {
     "welcomeBack": "Welcome Back",
@@ -19,7 +18,7 @@
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "signUpSubtitle": "Sign up to get started.",
-    "joinApp": "Join MyApp",
+    "joinApp": "Join Messenger",
     "brandTagline": "A premium, secure full-stack application. Built for the modern web.",
     "registerTagline": "Create your account and start building something amazing.",
     "noAccount": "Don't have an account?",

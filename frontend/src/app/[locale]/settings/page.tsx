@@ -3,6 +3,7 @@ import { serverFetchJson } from '@/lib/server-api';
 import { AppNav } from '@/components/layout/AppNav';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SettingsForm } from './SettingsForm';
+import { SecurityForm } from './SecurityForm';
 
 type DashboardData = {
   user: {
@@ -20,7 +21,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav user={user} activePage="settings" />
+      <AppNav activePage="settings" />
 
       <main className="max-w-3xl mx-auto px-4 md:px-6 py-8">
         <h2 className="text-3xl font-bold mb-8">{t('settings.title')}</h2>
@@ -39,6 +40,7 @@ export default async function SettingsPage() {
           </div>
 
           <SettingsForm user={user} />
+          <SecurityForm />
 
           <p className="text-white/40 text-sm mt-6">{t('settings.extendHint')}</p>
         </GlassCard>

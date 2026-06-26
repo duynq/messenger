@@ -48,6 +48,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_24_150619) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_conversation_participants_on_conversation_id"
+    t.index ["user_id", "conversation_id"], name: "index_conversation_participants_on_user_id_and_conversation_id", unique: true
     t.index ["user_id"], name: "index_conversation_participants_on_user_id"
   end
 
@@ -83,18 +84,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_24_150619) do
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
-  create_table "posts", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.string "title", null: false
-    t.text "body", null: false
-    t.boolean "published", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["published"], name: "index_posts_on_published"
-    t.index ["user_id", "created_at"], name: "index_posts_on_user_id_and_created_at"
-    t.index ["user_id"], name: "index_posts_on_user_id"
-  end
-
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -114,5 +103,4 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_24_150619) do
   add_foreign_key "conversations", "users", column: "admin_id"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "users"
-  add_foreign_key "posts", "users"
 end

@@ -7,13 +7,7 @@ class Api::V1::Users::RegistrationsController < Devise::RegistrationsController
     if resource.persisted?
       render json: {
         status: {code: 200, message: 'Signed up successfully.'},
-        data: {
-          id: current_user.id,
-          email: current_user.email,
-          first_name: current_user.first_name,
-          last_name: current_user.last_name,
-          full_name: current_user.full_name
-        },
+        data: UserBlueprint.render_as_hash(current_user, view: :with_email_and_storage),
         token: request.env['warden-jwt_auth.token']
       }
     else
