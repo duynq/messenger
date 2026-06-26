@@ -5,6 +5,7 @@ module Api
 
       def index
         scope = Current.user.conversations
+        scope = ConversationQuery.new(scope).active if params[:filter] == 'active'
         count = scope.count
         
         @pagy, conversations = paginate_with_deferred(

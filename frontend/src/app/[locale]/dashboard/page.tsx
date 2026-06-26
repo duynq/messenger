@@ -23,12 +23,13 @@ export default async function DashboardPage({
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams?.page) || 1;
   const convPage = Number(resolvedSearchParams?.conv_page) || 1;
+  const convFilter = (resolvedSearchParams?.conv_filter as string) || 'all';
 
   // Fetch dashboard data, users, and conversations in parallel
   const [data, usersData, conversationsData] = await Promise.all([
     serverFetchJson<DashboardData>('/dashboard'),
     serverFetchJson<any>(`/users?page=${page}`).catch(() => ({ users: [], meta: null })),
-    serverFetchJson<any>(`/conversations?page=${convPage}`).catch(() => ({ conversations: [], meta: null }))
+    serverFetchJson<any>(`/conversations?page=${convPage}&filter=${convFilter}`).catch(() => ({ conversations: [], meta: null }))
   ]);
 
   const user = data.user;
@@ -79,13 +80,11 @@ export default async function DashboardPage({
 
         {conversationsData.conversations && conversationsData.conversations.length > 0 && (
           <>
-            <div className="mb-6 mt-12 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">Recent Conversations</h3>
-            </div>
             <ConversationsList 
               conversations={conversationsData.conversations} 
               meta={conversationsData.meta} 
               currentUser={user}
+              currentFilter={convFilter}
             />
           </>
         )}
