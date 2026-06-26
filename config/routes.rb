@@ -22,8 +22,10 @@ Rails.application.routes.draw do
       # Conversations
       resources :conversations, only: [:index] do
         resources :messages, only: [:index, :create]
+        resources :participants, only: [:create, :destroy]
         collection do
           post :direct
+          post :group
         end
       end
 

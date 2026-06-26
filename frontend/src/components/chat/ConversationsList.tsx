@@ -7,6 +7,8 @@ import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import type { User } from '@/components/providers/AuthProvider';
 
+import { CreateGroupModal } from './CreateGroupModal';
+
 interface Conversation {
   id: number;
   is_group: boolean;
@@ -25,16 +27,19 @@ export function ConversationsList({
   conversations, 
   meta,
   currentUser,
-  currentFilter = 'all'
+  currentFilter = 'all',
+  availableUsers = []
 }: { 
   conversations: Conversation[];
   meta: Meta | null;
   currentUser: { email: string; full_name: string; id?: number };
   currentFilter?: string;
+  availableUsers?: any[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     setIsNavigating(false);
@@ -84,29 +89,45 @@ export function ConversationsList({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h3 className="text-xl font-semibold text-white">Recent Conversations</h3>
 
-        <div className="flex bg-white/5 rounded-xl p-1 w-fit">
-          <button
-            onClick={() => handleFilterChange('all')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              currentFilter === 'all'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-            }`}
+        <div className="flex items-center gap-3">
+          <div className="flex bg-white/5 rounded-xl p-1 w-fit">
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                currentFilter === 'all'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => handleFilterChange('active')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                currentFilter === 'active'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Active
+            </button>
+          </div>
+
+          <AnimatedButton
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-1.5 h-auto text-sm bg-indigo-500 hover:bg-indigo-600 border-0"
           >
-            All
-          </button>
-          <button
-            onClick={() => handleFilterChange('active')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              currentFilter === 'active'
-                ? 'bg-brand-500 text-white shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            Active
-          </button>
+            + New Group
+          </AnimatedButton>
         </div>
       </div>
+
+      <CreateGroupModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        availableUsers={availableUsers}
+        currentUser={currentUser}
+      />
 
       {isNavigating && (
         <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-[2px] flex items-center justify-center rounded-xl">

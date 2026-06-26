@@ -29,12 +29,16 @@ export default async function ChatRoomPage({
   const conversationId = Number(resolvedParams.id);
 
   // Fetch both the current user (from dashboard API) and the messages in parallel
-  const [dashboardData, messagesData] = await Promise.all([
+  const [dashboardData, messagesData, usersData] = await Promise.all([
     serverFetchJson<{ user: User }>('/dashboard'),
-    serverFetchJson<{ messages: Message[], meta: any }>(`/conversations/${conversationId}/messages`).catch(() => ({ messages: [], meta: null }))
+    serverFetchJson<{ messages: Message[], meta: any, conversation: any }>(`/conversations/${conversationId}/messages`).catch(() => ({ messages: [], meta: null, conversation: null })),
+    serverFetchJson<{ users: User[] }>('/users').catch(() => ({ users: [] }))
   ]);
 
   const currentUser = dashboardData.user;
+  const conversation = messagesData.conversation;
+  const availableUsers = usersData.users || [];
+
   // Reverse messages so newest are at the bottom.
   // The API returns desc order (newest first), we want them asc (newest last) for chat UI.
   const messages = [...(messagesData.messages || [])].reverse();
@@ -42,8 +46,12 @@ export default async function ChatRoomPage({
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
+  const chatTitle = conversation?.is_group && conversation?.name
+    ? conversation.name
+    : `Conversation #${conversationId}`;
+
   return (
-    <AppLayout activePage="dashboard" title={`Conversation #${conversationId}`}>
+    <AppLayout activePage="dashboard" title={chatTitle}>
       <div className="flex-1 max-w-4xl mx-auto w-full px-2 sm:px-4 md:px-6 py-4 md:py-6 flex flex-col h-full md:h-[calc(100vh-2rem)]">
         <div className="hidden md:flex items-center gap-4 mb-6">
           <Link
@@ -53,7 +61,7 @@ export default async function ChatRoomPage({
             <ArrowLeft className="w-5 h-5 text-white/70" />
           </Link>
           <h2 className="text-2xl font-bold text-white truncate">
-            Conversation #{conversationId}
+            {chatTitle}
           </h2>
         </div>
 
@@ -62,7 +70,9 @@ export default async function ChatRoomPage({
             initialMessages={messages} 
             conversationId={conversationId} 
             currentUser={currentUser} 
-            token={token} 
+            token={token}
+            conversation={conversation}
+            availableUsers={availableUsers}
           />
         </GlassCard>
       </div>

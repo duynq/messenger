@@ -83,6 +83,7 @@ export default async function DashboardPage({
               meta={conversationsData.meta} 
               currentUser={user}
               currentFilter={convFilter}
+              availableUsers={usersData.users || []}
             />
           </div>
         )}
