@@ -7,20 +7,14 @@ class Api::V1::Users::SessionsController < Devise::SessionsController
     render json: {
       status: {
         code: 200, message: 'Logged in successfully.',
-        data: {
-          id: current_user.id,
-          email: current_user.email,
-          first_name: current_user.first_name,
-          last_name: current_user.last_name,
-          full_name: current_user.full_name
-        }
+        data: UserBlueprint.render_as_hash(current_user, view: :with_email_and_storage)
       },
       token: request.env['warden-jwt_auth.token']
     }, status: :ok
   end
 
   def respond_to_on_destroy
-    current_user = find_user_from_jwt
+    current_user = find_user_from_jwt_token(extract_token_from_headers)
 
     if current_user
       render json: {
@@ -33,15 +27,5 @@ class Api::V1::Users::SessionsController < Devise::SessionsController
         message: "Couldn't find an active session."
       }, status: :unauthorized
     end
-  end
-
-  def find_user_from_jwt
-    return nil unless request.headers['Authorization'].present?
-
-    token = request.headers['Authorization'].split(' ').last
-    jwt_payload = JWT.decode(token, Warden::JWTAuth.config.secret).first
-    User.find(jwt_payload['sub'])
-  rescue JWT::DecodeError, JWT::ExpiredSignature, ActiveRecord::RecordNotFound
-    nil
   end
 end
