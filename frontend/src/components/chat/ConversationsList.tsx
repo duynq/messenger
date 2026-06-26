@@ -6,6 +6,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import type { User } from '@/components/providers/AuthProvider';
+import { usePresence } from '@/components/providers/PresenceProvider';
 
 import { CreateGroupModal } from './CreateGroupModal';
 
@@ -40,6 +41,7 @@ export function ConversationsList({
   const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { getUserPresence } = usePresence();
 
   useEffect(() => {
     setIsNavigating(false);
@@ -155,8 +157,15 @@ export function ConversationsList({
           return (
             <GlassCard key={conversation.id} hoverEffect className="flex flex-col justify-between p-5">
               <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 relative">
                   <span className="text-indigo-300 font-semibold text-lg">{initial}</span>
+                  {!conversation.is_group && otherUser && (
+                    <div
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                        getUserPresence(otherUser.id).isOnline ? 'bg-green-500' : 'bg-white/20'
+                      }`}
+                    />
+                  )}
                 </div>
                 <div className="overflow-hidden">
                   <h4 className="text-white font-medium truncate" title={displayName}>

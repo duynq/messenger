@@ -28,10 +28,16 @@ type ChatMessagesProps = {
   availableUsers?: any[];
 };
 
+import { formatTimeAgo } from '@/lib/utils';
+import { usePresence } from '@/components/providers/PresenceProvider';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+
 export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers }: ChatMessagesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { getUserPresence } = usePresence();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,7 +50,6 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   useEffect(() => {
     if (!token) return;
 
-    // Use environment variable or fallback to localhost
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
     const wsUrl = apiUrl.replace('http', 'ws').replace('/api/v1', '') + '/cable?token=' + token;
     
@@ -55,7 +60,6 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
       {
         received(data: { message: Message }) {
           setMessages((prevMessages) => {
-            // Prevent duplicates (in case Server Action revalidatePath also fetches this)
             if (prevMessages.some((msg) => msg.id === data.message.id)) {
               return prevMessages;
             }
@@ -71,27 +75,43 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     };
   }, [conversationId, token]);
 
+  const otherUser = conversation?.users?.find((u: any) => u.email !== currentUser.email) || conversation?.users?.[0];
+  const presence = otherUser ? getUserPresence(otherUser.id) : null;
+  const chatTitle = conversation?.is_group && conversation?.name ? conversation.name : (otherUser?.full_name || `Conversation #${conversationId}`);
+
   return (
     <>
-      {conversation?.is_group && (
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10">
-          <h3 className="text-lg font-semibold text-white truncate">
-            {conversation?.name || `Conversation #${conversationId}`}
-          </h3>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+      <div className="flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="md:hidden w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center transition-colors shrink-0"
           >
-            <Settings2 size={20} />
-          </button>
+            <ArrowLeft className="w-4 h-4 text-white/70" />
+          </Link>
+          <div className="flex flex-col">
+            <h3 className="text-lg md:text-xl font-bold text-white truncate">
+              {chatTitle}
+            </h3>
+            {!conversation?.is_group && presence && (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${presence.isOnline ? 'bg-green-500' : 'bg-white/20'}`} />
+                <span className="text-xs text-white/50">
+                  {presence.isOnline
+                    ? 'Online'
+                    : ((presence.lastSeenAt || otherUser?.last_seen_at)
+                        ? `Last seen ${formatTimeAgo(presence.lastSeenAt || otherUser.last_seen_at)}`
+                        : 'Offline')}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
-      <div className="hidden md:flex justify-end p-4 absolute top-0 right-0 z-10">
         {conversation?.is_group && (
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
             title="Group Settings"
           >
             <Settings2 size={20} />
