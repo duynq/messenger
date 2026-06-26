@@ -16,6 +16,11 @@ module Messages
 
       message = @conversation.messages.create!(user: @user, content: @content)
       
+      ActionCable.server.broadcast(
+        "conversation_#{@conversation.id}",
+        { message: MessageBlueprint.render_as_hash(message) }
+      )
+
       Result.success(message)
     rescue => e
       Result.failure({ message: e.message, status: :unprocessable_entity })
