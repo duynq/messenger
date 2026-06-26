@@ -48,3 +48,27 @@ export async function startDirectConversationAction(userId: number) {
   
   return { error: 'Failed to start conversation' };
 }
+
+export async function sendMessageAction(conversationId: number, content: string) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to send message' };
+    }
+
+    // Refresh the chat page data
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
