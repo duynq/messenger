@@ -5,7 +5,10 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import type { ActionState } from '@/lib/api-error';
 
-export function useActionToast(state: ActionState | undefined) {
+export function useActionToast(
+  state: ActionState | undefined,
+  onSuccess?: () => void
+) {
   const t = useTranslations();
 
   useEffect(() => {
@@ -19,6 +22,9 @@ export function useActionToast(state: ActionState | undefined) {
 
     if (state.successKey) {
       toast.success(t(state.successKey as Parameters<typeof t>[0]));
+      if (onSuccess) {
+        onSuccess();
+      }
     }
-  }, [state, t]);
+  }, [state, t, onSuccess]);
 }

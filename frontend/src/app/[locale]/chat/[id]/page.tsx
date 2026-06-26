@@ -3,7 +3,12 @@ import { AppNav } from '@/components/layout/AppNav';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { MessageCircle } from 'lucide-react';
 
-export default function ChatPlaceholderPage({ params }: { params: { id: string } }) {
+export default async function ChatPlaceholderPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const resolvedParams = await params;
   return (
     <div className="min-h-screen bg-background">
       <AppNav activePage="dashboard" />
@@ -19,12 +24,12 @@ export default function ChatPlaceholderPage({ params }: { params: { id: string }
           </h2>
           
           <p className="text-white/60 max-w-md mx-auto mb-8">
-            You have successfully created or jumped to Conversation #{params.id}. 
+            You have successfully created or jumped to Conversation #{resolvedParams.id}. 
             The real-time chat interface will be implemented in the next phase.
           </p>
           
           <div className="text-sm font-mono bg-white/5 py-2 px-4 rounded-lg text-brand-300">
-            /chat/{params.id}
+            /chat/{resolvedParams.id}
           </div>
         </GlassCard>
       </main>

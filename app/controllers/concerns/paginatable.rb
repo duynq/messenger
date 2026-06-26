@@ -7,8 +7,9 @@ module Paginatable
   # @param scope [ActiveRecord::Relation] The base scope to paginate.
   # @param count [Integer] The total count of records (usually cached).
   # @param order [Hash, String] The ordering for the scope (required for Deferred Join to work properly).
+  # @param includes [Symbol, Array, Hash] Associations to preload to prevent N+1 queries.
   # @return [Array] A tuple containing [pagy_obj, records]
-  def paginate_with_deferred(scope, count:, order: { created_at: :desc, id: :desc })
+  def paginate_with_deferred(scope, count:, order: { created_at: :desc, id: :desc }, includes: nil)
     ordered_scope = scope.order(order)
 
     begin
@@ -25,6 +26,7 @@ module Paginatable
 
     # Fetch the actual records using the IDs
     records = scope.klass.where(id: ids).order(order)
+    records = records.includes(includes) if includes
 
     [pagy_obj, records]
   end

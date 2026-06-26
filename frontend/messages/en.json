@@ -58,7 +58,12 @@
     "updateFailed": "Update failed",
     "deleteFailed": "Delete failed",
     "extendHint": "Extend this page with profile editing, password change, and account deletion forms.",
-    "loadFailed": "Failed to load settings"
+    "loadFailed": "Failed to load settings",
+    "security": "Security",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "updatePassword": "Update Password"
   },
   "errors": {
     "title": "Something went wrong",
