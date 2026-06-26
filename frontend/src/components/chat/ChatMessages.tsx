@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
+import { GroupSettingsModal } from './GroupSettingsModal';
+import { Settings2 } from 'lucide-react';
 
 type User = {
   id: number;
@@ -22,10 +24,13 @@ type ChatMessagesProps = {
   conversationId: number;
   currentUser: User;
   token: string | undefined;
+  conversation?: any;
+  availableUsers?: any[];
 };
 
-export function ChatMessages({ initialMessages, conversationId, currentUser, token }: ChatMessagesProps) {
+export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers }: ChatMessagesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,6 +73,40 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
 
   return (
     <>
+      {conversation?.is_group && (
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10">
+          <h3 className="text-lg font-semibold text-white truncate">
+            {conversation?.name || `Conversation #${conversationId}`}
+          </h3>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+          >
+            <Settings2 size={20} />
+          </button>
+        </div>
+      )}
+
+      <div className="hidden md:flex justify-end p-4 absolute top-0 right-0 z-10">
+        {conversation?.is_group && (
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            title="Group Settings"
+          >
+            <Settings2 size={20} />
+          </button>
+        )}
+      </div>
+
+      <GroupSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        conversation={conversation}
+        currentUser={currentUser}
+        availableUsers={availableUsers || []}
+      />
+
       <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col">
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-white/40">

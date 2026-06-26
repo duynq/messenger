@@ -32,6 +32,18 @@ module Api
           render json: { error: result.error[:message] }, status: result.error[:status]
         end
       end
+
+      def group
+        result = Conversations::GroupCreationService.call(Current.user, params[:name], params[:user_ids])
+
+        if result.success?
+          render json: {
+            conversation: ConversationBlueprint.render_as_hash(result.value, view: :with_participants)
+          }, status: :ok
+        else
+          render json: { error: result.error[:message] || result.error }, status: result.error[:status] || :unprocessable_entity
+        end
+      end
     end
   end
 end

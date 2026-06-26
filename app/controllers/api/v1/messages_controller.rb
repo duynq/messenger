@@ -21,7 +21,8 @@ module Api
 
         render json: {
           messages: MessageBlueprint.render_as_hash(messages),
-          meta: pagination_meta(@pagy)
+          meta: pagination_meta(@pagy),
+          conversation: ConversationBlueprint.render_as_hash(@conversation, view: :with_participants)
         }, status: :ok
       end
 
