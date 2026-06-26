@@ -7,15 +7,17 @@ import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { LogOut } from 'lucide-react';
 
+import { useUser } from '@/components/providers/AuthProvider';
+
 export type NavPage = 'dashboard' | 'settings';
 
 interface AppNavProps {
-  user: { full_name: string; total_storage?: string };
   activePage: NavPage;
 }
 
-export function AppNav({ user, activePage }: AppNavProps) {
+export function AppNav({ activePage }: AppNavProps) {
   const t = useTranslations();
+  const user = useUser();
 
   const navLinks: { href: '/dashboard' | '/settings'; label: string; page: NavPage }[] = [
     { href: '/dashboard', label: t('nav.dashboard'), page: 'dashboard' },
@@ -57,11 +59,11 @@ export function AppNav({ user, activePage }: AppNavProps) {
         <div className="hidden md:flex items-center gap-6">
           <LanguageSwitcher />
           <div className="flex flex-col items-end">
-            <span className="text-sm font-medium text-white">{user.full_name}</span>
-            {user.total_storage && (
-              <span className="text-xs text-brand-300">
-                {t('nav.storageUsed', { size: user.total_storage })}
-              </span>
+            {user && (
+              <>
+                <span className="text-sm font-medium text-white">{user.full_name}</span>
+
+              </>
             )}
           </div>
           <div className="h-8 w-px bg-white/10" />

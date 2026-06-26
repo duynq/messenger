@@ -35,6 +35,41 @@ export async function updateAccountAction(
   }
 }
 
+export async function updatePasswordAction(
+  prevState: ActionState | undefined,
+  formData: FormData,
+): Promise<ActionState> {
+  const current_password = formData.get('current_password') as string;
+  const password = formData.get('password') as string;
+  const password_confirmation = formData.get('password_confirmation') as string;
+
+  if (password !== password_confirmation) {
+    return { errorKey: 'validation.passwordsDoNotMatch' };
+  }
+
+  try {
+    const response = await serverFetch('/users', {
+      method: 'PUT',
+      body: JSON.stringify({
+        user: { current_password, password, password_confirmation },
+      }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      return {
+        error: await parseApiError(response),
+        errorKey: 'settings.updateFailed',
+      };
+    }
+
+    return { success: true, successKey: 'settings.passwordUpdated' };
+  } catch {
+    return { errorKey: 'auth.unexpectedError' };
+  }
+}
+
 export async function deleteAccountAction(): Promise<ActionState> {
   try {
     const response = await serverFetch('/account', {

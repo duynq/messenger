@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav user={user} activePage="dashboard" />
+      <AppNav activePage="dashboard" />
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         <div className="mb-8">
