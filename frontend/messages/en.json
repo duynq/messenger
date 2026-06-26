@@ -5,7 +5,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "tryAgain": "Try Again",
-    "backToDashboard": "Back to Dashboard"
+    "backToDashboard": "Back to Dashboard",
+    "close": "Close"
   },
   "nav": {
     "dashboard": "Dashboard",
