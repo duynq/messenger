@@ -38,9 +38,10 @@ export default async function LocaleLayout({
   const user = await getSessionUser();
 
   return (
-    <html lang={locale} className="dark">
+    <html lang={locale} className="dark" suppressHydrationWarning>
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground selection:bg-brand-500/30 selection:text-brand-200`}
+        suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages}>
           <AuthProvider user={user}>

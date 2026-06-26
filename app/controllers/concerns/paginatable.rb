@@ -1,43 +1,43 @@
 module Paginatable
   extend ActiveSupport::Concern
 
-  included do
-    # Any shared setup if needed
-  end
+  # Encapsulates Pagy pagination with Deferred Join (Index-Only Scan) optimization.
+  # Handles Pagy::OverflowError gracefully by falling back to the last page.
+  #
+  # @param scope [ActiveRecord::Relation] The base scope to paginate.
+  # @param count [Integer] The total count of records (usually cached).
+  # @param order [Hash, String] The ordering for the scope (required for Deferred Join to work properly).
+  # @return [Array] A tuple containing [pagy_obj, records]
+  def paginate_with_deferred(scope, count:, order: { created_at: :desc, id: :desc })
+    ordered_scope = scope.order(order)
 
-  def pagy(collection, items: CustomPagination::DEFAULT_ITEMS_PER_PAGE)
-    page = (params[:page] || 1).to_i
-    count = collection.count
-    count = count.count if count.is_a?(Hash) # Handle grouped queries if any
-    
-    pages = (count.to_f / items).ceil
-    pages = 1 if pages == 0
+    begin
+      pagy_obj, pagy_scope = pagy(ordered_scope, count: count)
+    rescue Pagy::OverflowError
+      limit = Pagy::DEFAULT[:limit] || 20
+      last_page = (count / limit.to_f).ceil
+      last_page = 1 if last_page < 1
+      pagy_obj, pagy_scope = pagy(ordered_scope, count: count, page: last_page)
+    end
 
-    page = pages if page > pages
-    page = 1 if page < 1
+    # Deferred Join: Use Index Only Scan to quickly skip offset rows
+    ids = pagy_scope.pluck(:id)
 
-    records = collection.limit(items).offset((page - 1) * items)
-
-    pagy_obj = {
-      count: count,
-      page: page,
-      items: items,
-      pages: pages,
-      next: page < pages ? page + 1 : nil,
-      prev: page > 1 ? page - 1 : nil
-    }
+    # Fetch the actual records using the IDs
+    records = scope.klass.where(id: ids).order(order)
 
     [pagy_obj, records]
   end
 
-  def pagy_metadata(pagy)
+  # Standardizes pagination metadata for the API response.
+  #
+  # @param pagy_obj [Pagy] The Pagy instance returned from paginate_with_deferred
+  # @return [Hash] Formatted metadata
+  def pagination_meta(pagy_obj)
     {
-      count: pagy[:count],
-      page: pagy[:page],
-      items: pagy[:items],
-      pages: pagy[:pages],
-      next: pagy[:next],
-      prev: pagy[:prev]
+      current_page: pagy_obj.page,
+      total_pages: pagy_obj.pages,
+      has_next: pagy_obj.next.present?
     }
   end
 end

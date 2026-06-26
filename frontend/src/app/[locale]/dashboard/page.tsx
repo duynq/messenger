@@ -3,6 +3,7 @@ import { serverFetchJson } from '@/lib/server-api';
 import { AppNav } from '@/components/layout/AppNav';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LayoutDashboard, FileText, Settings } from 'lucide-react';
+import { UsersList } from '@/components/chat/UsersList';
 
 type DashboardData = {
   user: {
@@ -11,9 +12,21 @@ type DashboardData = {
   };
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const t = await getTranslations();
-  const data = await serverFetchJson<DashboardData>('/dashboard');
+  const resolvedSearchParams = await searchParams;
+  const page = Number(resolvedSearchParams?.page) || 1;
+
+  // Fetch dashboard data and initial users in parallel
+  const [data, usersData] = await Promise.all([
+    serverFetchJson<DashboardData>('/dashboard'),
+    serverFetchJson<any>(`/users?page=${page}`).catch(() => ({ users: [], meta: null }))
+  ]);
+
   const user = data.user;
 
   return (
@@ -60,12 +73,11 @@ export default async function DashboardPage() {
           </GlassCard>
         </div>
 
-        <GlassCard className="p-8 text-center">
-          <h3 className="text-xl font-semibold mb-2 text-white/80">
-            {t('dashboard.starterTitle')}
-          </h3>
-          <p className="text-white/50">{t('dashboard.starterDescription')}</p>
-        </GlassCard>
+        <div className="mb-6 flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-white">Directory</h3>
+        </div>
+
+        <UsersList users={usersData.users || []} meta={usersData.meta} />
       </main>
     </div>
   );

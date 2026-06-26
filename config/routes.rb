@@ -16,6 +16,15 @@ Rails.application.routes.draw do
       # Dashboard
       get "dashboard", to: "dashboard#index"
 
+      # Users List
+      resources :users, only: [:index]
+
+      # Conversations
+      resources :conversations, only: [] do
+        collection do
+          post :direct
+        end
+      end
 
       # Account management
       resource :account, only: [:update, :destroy]
