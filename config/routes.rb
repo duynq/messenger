@@ -21,6 +21,7 @@ Rails.application.routes.draw do
 
       # Conversations
       resources :conversations, only: [:index] do
+        resources :messages, only: [:index, :create]
         collection do
           post :direct
         end
