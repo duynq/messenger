@@ -1,10 +1,13 @@
+require 'pagy/backend'
+
 class ApplicationController < ActionController::API
+  include Pagy::Backend
   before_action :configure_permitted_parameters, if: :devise_controller?
   before_action :authenticate_user!
   before_action :set_locale
 
-  include Paginatable
   include CurrentUserHelper
+  include Paginatable
 
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
   rescue_from ActiveRecord::RecordInvalid, with: :record_invalid
