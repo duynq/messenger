@@ -5,7 +5,9 @@ class User < ApplicationRecord
   # ──────────────────────────────────────────────
   # Associations — add your own here
   # ──────────────────────────────────────────────
-  has_many :posts, dependent: :destroy
+  has_many :conversation_participants, dependent: :destroy
+  has_many :conversations, through: :conversation_participants
+  has_many :messages, dependent: :destroy
 
   # ──────────────────────────────────────────────
   # Validations
