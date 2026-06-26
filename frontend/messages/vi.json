@@ -58,7 +58,12 @@
     "updateFailed": "Cập nhật thất bại",
     "deleteFailed": "Xóa thất bại",
     "extendHint": "Mở rộng trang này với form chỉnh sửa hồ sơ, đổi mật khẩu và xóa tài khoản.",
-    "loadFailed": "Không thể tải cài đặt"
+    "loadFailed": "Không thể tải cài đặt",
+    "security": "Bảo mật",
+    "currentPassword": "Mật khẩu hiện tại",
+    "newPassword": "Mật khẩu mới",
+    "confirmNewPassword": "Xác nhận mật khẩu mới",
+    "updatePassword": "Cập nhật mật khẩu"
   },
   "errors": {
     "title": "Đã xảy ra lỗi",

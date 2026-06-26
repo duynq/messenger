@@ -20,7 +20,7 @@ Rails.application.routes.draw do
       resources :users, only: [:index]
 
       # Conversations
-      resources :conversations, only: [] do
+      resources :conversations, only: [:index] do
         collection do
           post :direct
         end

@@ -4,11 +4,13 @@ import { AppNav } from '@/components/layout/AppNav';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LayoutDashboard, FileText, Settings } from 'lucide-react';
 import { UsersList } from '@/components/chat/UsersList';
+import { ConversationsList } from '@/components/chat/ConversationsList';
 
 type DashboardData = {
   user: {
     full_name: string;
     email: string;
+    id?: number;
   };
 };
 
@@ -20,11 +22,13 @@ export default async function DashboardPage({
   const t = await getTranslations();
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams?.page) || 1;
+  const convPage = Number(resolvedSearchParams?.conv_page) || 1;
 
-  // Fetch dashboard data and initial users in parallel
-  const [data, usersData] = await Promise.all([
+  // Fetch dashboard data, users, and conversations in parallel
+  const [data, usersData, conversationsData] = await Promise.all([
     serverFetchJson<DashboardData>('/dashboard'),
-    serverFetchJson<any>(`/users?page=${page}`).catch(() => ({ users: [], meta: null }))
+    serverFetchJson<any>(`/users?page=${page}`).catch(() => ({ users: [], meta: null })),
+    serverFetchJson<any>(`/conversations?page=${convPage}`).catch(() => ({ conversations: [], meta: null }))
   ]);
 
   const user = data.user;
@@ -73,7 +77,20 @@ export default async function DashboardPage({
           </GlassCard>
         </div>
 
-        <div className="mb-6 flex items-center justify-between">
+        {conversationsData.conversations && conversationsData.conversations.length > 0 && (
+          <>
+            <div className="mb-6 mt-12 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">Recent Conversations</h3>
+            </div>
+            <ConversationsList 
+              conversations={conversationsData.conversations} 
+              meta={conversationsData.meta} 
+              currentUser={user}
+            />
+          </>
+        )}
+
+        <div className="mb-6 mt-12 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-white">Directory</h3>
         </div>
 

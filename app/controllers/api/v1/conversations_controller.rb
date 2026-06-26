@@ -3,22 +3,33 @@ module Api
     class ConversationsController < ApplicationController
       before_action :authenticate_user!
 
-      def direct
-        target_user = User.find_by(id: params[:user_id])
+      def index
+        scope = Current.user.conversations
+        count = scope.count
         
-        unless target_user
-          return render json: { error: 'User not found' }, status: :not_found
-        end
-
-        if target_user.id == Current.user.id
-          return render json: { error: 'Cannot start a conversation with yourself' }, status: :unprocessable_entity
-        end
-
-        conversation = Conversation.find_or_create_direct_message(Current.user, target_user)
+        @pagy, conversations = paginate_with_deferred(
+          scope,
+          count: count,
+          includes: :users,
+          order: { created_at: :desc, id: :desc }
+        )
 
         render json: {
-          conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
+          conversations: ConversationBlueprint.render_as_hash(conversations, view: :with_participants),
+          meta: pagination_meta(@pagy)
         }, status: :ok
+      end
+
+      def direct
+        result = Conversations::DirectCreationService.call(Current.user, params[:user_id])
+
+        if result.success?
+          render json: {
+            conversation: ConversationBlueprint.render_as_hash(result.value, view: :with_participants)
+          }, status: :ok
+        else
+          render json: { error: result.error[:message] }, status: result.error[:status]
+        end
       end
     end
   end
