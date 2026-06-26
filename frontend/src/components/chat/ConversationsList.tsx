@@ -24,11 +24,13 @@ interface Meta {
 export function ConversationsList({ 
   conversations, 
   meta,
-  currentUser 
+  currentUser,
+  currentFilter = 'all'
 }: { 
   conversations: Conversation[];
   meta: Meta | null;
   currentUser: { email: string; full_name: string; id?: number };
+  currentFilter?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,13 +38,22 @@ export function ConversationsList({
 
   useEffect(() => {
     setIsNavigating(false);
-  }, [conversations]);
+  }, [conversations, currentFilter]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage === meta?.current_page || newPage < 1 || newPage > (meta?.total_pages || 1)) return;
     setIsNavigating(true);
     const params = new URLSearchParams(searchParams.toString());
     params.set('conv_page', newPage.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleFilterChange = (filter: string) => {
+    if (filter === currentFilter) return;
+    setIsNavigating(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('conv_filter', filter);
+    params.set('conv_page', '1'); // reset page when filter changes
     router.push(`?${params.toString()}`);
   };
 
@@ -68,19 +79,49 @@ export function ConversationsList({
     return pages;
   };
 
-  if (conversations.length === 0) {
-    return null; // Don't show the section if no recent conversations
-  }
-
   return (
-    <div className="space-y-6 relative mb-12">
+    <div className="space-y-6 relative mb-12 mt-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h3 className="text-xl font-semibold text-white">Recent Conversations</h3>
+
+        <div className="flex bg-white/5 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              currentFilter === 'all'
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => handleFilterChange('active')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              currentFilter === 'active'
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Active
+          </button>
+        </div>
+      </div>
+
       {isNavigating && (
         <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-[2px] flex items-center justify-center rounded-xl">
           <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {conversations.length === 0 ? (
+        <div className="text-center text-white/50 py-12 border border-white/10 rounded-2xl bg-white/5">
+          {currentFilter === 'active'
+            ? 'No active conversations found.'
+            : 'No conversations yet.'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {conversations.map(conversation => {
           // Find the other user in the conversation
           const otherUser = conversation.users.find(u => u.email !== currentUser.email) || conversation.users[0];
@@ -117,7 +158,8 @@ export function ConversationsList({
             </GlassCard>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {meta && meta.total_pages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
