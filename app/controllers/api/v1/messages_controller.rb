@@ -9,19 +9,21 @@ module Api
           return render json: { error: 'Unauthorized' }, status: :forbidden
         end
 
-        scope = @conversation.messages.includes(:user)
-        count = scope.count
-        
-        @pagy, messages = paginate_with_deferred(
-          scope,
-          count: count,
-          includes: :user,
-          order: { created_at: :desc, id: :desc }
-        )
+        scope = @conversation.messages.includes(:user).order(id: :desc)
+
+        if params[:before_message_id].present?
+          scope = scope.where('id < ?', params[:before_message_id])
+        end
+
+        messages = scope.limit(20).to_a
+        has_next = messages.any? && @conversation.messages.where('id < ?', messages.last.id).exists?
 
         render json: {
           messages: MessageBlueprint.render_as_hash(messages),
-          meta: pagination_meta(@pagy),
+          meta: {
+            has_next: has_next,
+            next_cursor: messages.last&.id
+          },
           conversation: ConversationBlueprint.render_as_hash(@conversation, view: :with_participants)
         }, status: :ok
       end
