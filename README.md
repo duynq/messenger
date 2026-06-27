@@ -1,6 +1,6 @@
-# 🚀 MyApp — Full-Stack Base Template
+# 🚀 Messenger — Real-time Chat Application
 
-A production-ready full-stack base template with **Rails 7.1 API** + **Next.js 15** + **Docker**.
+A production-ready full-stack real-time chat application built with **Rails 7.1 API** (ActionCable) + **Next.js 15** + **Docker**.
 
 ## ⚡ Tech Stack
 
@@ -8,221 +8,98 @@ A production-ready full-stack base template with **Rails 7.1 API** + **Next.js 1
 |-------|-----------|
 | **Backend** | Rails 7.1 (API mode) · Ruby 3.2.2 |
 | **Frontend** | Next.js 15 · React 19 · TypeScript · TailwindCSS 3 |
+| **Real-time** | ActionCable (WebSockets) |
 | **Auth** | Devise + JWT (devise-jwt) |
 | **Database** | PostgreSQL 15 |
+| **Caching/PubSub** | Redis 7 |
 | **File Storage** | MinIO (S3-compatible) |
 | **Serialization** | Blueprinter |
-| **Pagination** | Custom `Paginatable` concern |
-| **Rate Limiting** | Rack::Attack |
-| **Testing** | RSpec + FactoryBot + Shoulda · Jest + Testing Library |
+| **Pagination** | Pagy (Offset) + Cursor-based (Messages) |
 | **Infrastructure** | Docker Compose |
+
+## ✨ Key Features
+
+- **Real-time Messaging**: Instant message delivery using WebSockets (ActionCable).
+- **1-to-1 & Group Chats**: Support for both direct messages and multi-user group conversations.
+- **Infinite Scroll**: Cursor-based pagination for older messages with seamless scroll anchoring.
+- **User Liveness (Presence)**: Real-time Online/Offline indicators and "Last seen X mins ago" tracking.
+- **User Directory & Search**: Browse all registered users or search by name/email to start conversations.
+- **Dark Mode UI**: Premium aesthetic with glassmorphism, built with TailwindCSS and Framer Motion.
+- **Internationalization (i18n)**: Multi-language support via `next-intl`.
 
 ## 🏗️ Project Structure
 
 ```
-base-template/
+messenger/
 ├── app/
-│   ├── blueprints/          # Blueprinter serializers
-│   ├── controllers/
-│   │   ├── api/v1/          # API controllers
-│   │   │   ├── users/       # Devise JWT auth controllers
-│   │   │   ├── posts_controller.rb    # Example CRUD
-│   │   │   └── dashboard_controller.rb
-│   │   ├── concerns/        # Shared concerns (Paginatable)
-│   │   └── application_controller.rb  # Error handling + auth
+│   ├── blueprints/          # Blueprinter serializers (User, Message, Conversation)
+│   ├── channels/            # ActionCable channels (PresenceChannel, ConversationChannel)
+│   ├── controllers/         # API controllers (v1)
 │   ├── models/              # ActiveRecord models
 │   └── services/            # Service objects (Result pattern)
 ├── config/
 │   ├── initializers/        # Devise, CORS, Rack::Attack, etc.
-│   ├── environments/        # dev/test/prod configs
 │   ├── routes.rb            # API routes
 │   └── database.yml
 ├── db/
 │   ├── migrate/             # Database migrations
 │   └── seeds.rb             # Seed data
-├── spec/                    # RSpec tests
-│   ├── factories/           # FactoryBot factories
-│   ├── models/              # Model specs
-│   ├── requests/            # Request specs (API tests)
-│   └── support/             # Test helpers
 ├── frontend/
 │   ├── src/
-│   │   ├── actions/         # Next.js Server Actions (auth, account)
+│   │   ├── actions/         # Next.js Server Actions (auth)
 │   │   ├── app/             # App Router pages ([locale]/...)
-│   │   ├── components/      # UI + Layout components
+│   │   ├── components/      # React UI components (chat, layout, providers)
 │   │   ├── hooks/           # Custom React hooks
-│   │   ├── i18n/            # next-intl config (routing, request, navigation)
-│   │   ├── lib/             # Server API client, Zod schemas
+│   │   ├── i18n/            # next-intl configuration
+│   │   ├── lib/             # Server API client, Zod schemas, Utils
 │   │   └── middleware.ts    # Auth + i18n route protection
-│   ├── messages/            # en.json / vi.json translations
-│   ├── tailwind.config.ts   # Design system
-│   └── package.json
-├── scripts/
-│   ├── minio-setup.sh       # MinIO bucket setup
-│   └── rename-project.sh    # Auto-rename project
+│   ├── messages/            # i18n JSON files
+│   └── tailwind.config.ts   # Design system
 ├── docker-compose.yml       # Full stack orchestration
-├── Dockerfile               # Rails backend
 └── README.md
 ```
 
 ## 🚀 Quick Start
 
-### 1. Clone & Rename
-
-```bash
-# Copy the template
-cp -r base-template my-new-project
-cd my-new-project
-
-# Rename everything automatically
-chmod +x scripts/rename-project.sh
-./scripts/rename-project.sh my_new_project
-```
-
-### 2. Start with Docker
+### 1. Start with Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-This starts:
+This starts all necessary services:
 - 🟢 **Rails API** at `http://localhost:3000`
 - 🔵 **Next.js Frontend** at `http://localhost:3001`
 - 🐘 **PostgreSQL** at `localhost:5432`
+- 🔴 **Redis** at `localhost:6379`
 - 📦 **MinIO Console** at `http://localhost:9001` (admin: minioadmin / minioadmin123)
+
+### 2. Run Database Migrations & Seeds
+
+Open a new terminal window and run:
+```bash
+docker compose exec web bundle exec rails db:migrate db:seed
+```
 
 ### 3. Default Credentials
 
-After first boot, the seed data creates a test user:
+After seeding the database, you can log in with:
 - **Email:** `admin@example.com`
 - **Password:** `password123`
 
-## 📖 Patterns & Conventions
+*(Note: The seed script usually creates additional mock users to test the chat functionality).*
 
-### Backend Patterns
+## 📖 Real-time Architecture
 
-#### Result Pattern (Service Objects)
-```ruby
-# app/services/result.rb
-result = Result.success(data)
-result = Result.failure("Something went wrong")
+### Presence Tracking (User Liveness)
+- Connected clients subscribe to the `PresenceChannel`.
+- Upon connection, the backend broadcasts an `online` status and updates the user's `last_seen_at` in the DB.
+- Upon disconnection, the backend broadcasts an `offline` status with the latest `last_seen_at` timestamp.
+- The `PresenceProvider` in Next.js maintains a global state of user statuses, updating the UI (Green Dots, "Last seen...") instantly.
 
-result.success?  # => true/false
-result.value     # => data on success
-result.error     # => error message on failure
-```
-
-#### Blueprinter Serialization
-```ruby
-# app/blueprints/post_blueprint.rb
-class PostBlueprint < Blueprinter::Base
-  identifier :id
-  fields :title, :body, :published
-
-  view :with_user do
-    association :user, blueprint: UserBlueprint
-  end
-end
-
-# Usage in controller:
-render json: PostBlueprint.render_as_hash(records)
-```
-
-#### Pagination (Custom Paginatable Concern)
-```ruby
-# In any controller (included via ApplicationController):
-# Supports ?page=N query param. Default: 12 items/page.
-pagy_obj, records = pagy(collection, items: 20)  # items is optional
-render json: {
-  posts: PostBlueprint.render_as_hash(records),
-  pagination: pagy_metadata(pagy_obj)
-  # => { count:, page:, items:, pages:, next:, prev: }
-}
-```
-
-### Frontend Patterns
-
-#### Server Actions (Auth)
-```typescript
-// src/actions/auth.ts — handles login/register/logout
-// Automatically manages JWT cookie via httpOnly cookies
-```
-
-#### Server API Client
-```typescript
-// src/lib/server-api.ts
-// serverFetch automatically attaches JWT token + Accept-Language header.
-// Base URL (http://web:3000/api/v1) is set via API_URL_INTERNAL env var.
-import { serverFetchJson } from '@/lib/server-api';
-
-// In a Server Component or Server Action:
-const data = await serverFetchJson<MyType>('/posts');       // GET /api/v1/posts
-const data = await serverFetchJson<MyType>('/posts/1');     // GET /api/v1/posts/1
-// Automatically redirects to /login on 401 Unauthorized.
-```
-
-#### Zod Validation
-```typescript
-// src/lib/schemas/auth.ts — shared validation schemas
-import { loginSchema, registerSchema } from '@/lib/schemas/auth';
-```
-
-## 🔧 How to Add a New Resource
-
-### Step 1: Generate Migration
-```bash
-docker compose exec web bundle exec rails generate migration CreateProducts name:string price:decimal user:references
-docker compose exec web bundle exec rails db:migrate
-```
-
-### Step 2: Create Model
-```ruby
-# app/models/product.rb
-class Product < ApplicationRecord
-  belongs_to :user
-  validates :name, presence: true
-  validates :price, presence: true, numericality: { greater_than: 0 }
-end
-```
-
-### Step 3: Create Blueprint
-```ruby
-# app/blueprints/product_blueprint.rb
-class ProductBlueprint < Blueprinter::Base
-  identifier :id
-  fields :name, :price, :created_at
-end
-```
-
-### Step 4: Create Controller
-```ruby
-# app/controllers/api/v1/products_controller.rb
-class Api::V1::ProductsController < ApplicationController
-  def index
-    pagy_obj, records = pagy(current_user.products)
-    render json: {
-      products: ProductBlueprint.render_as_hash(records),
-      pagination: pagy_metadata(pagy_obj)
-    }
-  end
-  # ... create, update, destroy
-end
-```
-
-### Step 5: Add Route
-```ruby
-# config/routes.rb — inside namespace :api > :v1
-namespace :api do
-  namespace :v1 do
-    resources :products, only: [:index, :show, :create, :update, :destroy]
-  end
-end
-```
-
-### Step 6: Add Tests
-```ruby
-# spec/factories/products.rb + spec/models/product_spec.rb + spec/requests/products_spec.rb
-```
+### Infinite Scroll (Cursor Pagination)
+- Instead of traditional page numbers, the chat UI requests older messages using `?before_message_id=XYZ`.
+- The Next.js frontend uses React's `flushSync` and explicit `scrollHeight` calculations to strictly anchor the scroll position, preventing the view from jumping when older messages are prepended to the DOM.
 
 ## 🧪 Running Tests
 
@@ -234,41 +111,17 @@ docker compose exec web bundle exec rspec
 ### Frontend
 ```bash
 docker compose exec frontend npm test
-# or locally:
-cd frontend && npm test
 ```
 
 ## 📚 API Documentation (Swagger)
 
-This template includes auto-generated Swagger (OpenAPI 3) documentation using the `rswag` gem.
+This application includes auto-generated Swagger (OpenAPI 3) documentation.
 
 **1. View the API Docs**
 Once the server is running, visit:
 👉 **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
 
 **2. Generate / Update Docs**
-The Swagger JSON/YAML is generated from the RSpec test files located in `spec/requests/api/...`. To regenerate the `swagger.yaml` file after making changes, run:
 ```bash
 docker compose exec web bundle exec rake rswag:specs:swaggerize
 ```
-
-## 📋 Included Features
-
-- ✅ JWT Authentication (login, register, logout)
-- ✅ Auth middleware (route protection on both frontend and backend)
-- ✅ CORS configuration
-- ✅ Rate limiting (Rack::Attack)
-- ✅ API pagination
-- ✅ Swagger API Documentation (`rswag`)
-- ✅ Blueprinter serialization
-- ✅ Result pattern for service objects
-- ✅ Dark theme with glassmorphism UI
-- ✅ Responsive design
-- ✅ Framer Motion animations
-- ✅ Toast notifications (Sonner)
-- ✅ Zod form validation
-- ✅ Error/Loading/404 pages
-- ✅ RSpec + Jest test infrastructure
-- ✅ Docker Compose orchestration
-- ✅ MinIO (S3-compatible) file storage
-- ✅ Auto-rename script
