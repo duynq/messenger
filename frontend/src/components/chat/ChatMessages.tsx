@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Loader2 } from 'lucide-react';
 
 type User = {
   id: number;
@@ -26,6 +27,7 @@ type ChatMessagesProps = {
   token: string | undefined;
   conversation?: any;
   availableUsers?: any[];
+  initialMeta?: { has_next: boolean; next_cursor: number | null };
 };
 
 import { formatTimeAgo } from '@/lib/utils';
@@ -33,10 +35,17 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers }: ChatMessagesProps) {
+export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers, initialMeta }: ChatMessagesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [hasNext, setHasNext] = useState(initialMeta?.has_next || false);
+  const [nextCursor, setNextCursor] = useState<number | null>(initialMeta?.next_cursor || null);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef(true);
+  const isInitialRender = useRef(true);
   const { getUserPresence } = usePresence();
 
   const scrollToBottom = () => {
@@ -44,8 +53,66 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      scrollToBottom();
+      return;
+    }
+    if (isAtBottom.current) {
+      scrollToBottom();
+    }
   }, [messages]);
+
+  const loadOlderMessages = async () => {
+    if (!nextCursor || isLoadingOlder) return;
+    setIsLoadingOlder(true);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+      const res = await fetch(`${apiUrl}/conversations/${conversationId}/messages?before_message_id=${nextCursor}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const olderMessages = [...data.messages].reverse();
+        
+        const oldHeight = containerRef.current?.scrollHeight;
+        
+        flushSync(() => {
+          setMessages(prev => {
+            // filter duplicates just in case
+            const newMsgs = olderMessages.filter(om => !prev.some(pm => pm.id === om.id));
+            return [...newMsgs, ...prev];
+          });
+          setHasNext(data.meta.has_next);
+          setNextCursor(data.meta.next_cursor);
+        });
+
+        if (containerRef.current && oldHeight) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight - oldHeight;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load older messages', e);
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    
+    // Check if we are near the bottom (within 50px)
+    isAtBottom.current = scrollHeight - scrollTop - clientHeight < 50;
+
+    if (scrollTop === 0 && hasNext && !isLoadingOlder) {
+      loadOlderMessages();
+    }
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -81,7 +148,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10">
+      <div className="flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10 shrink-0">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
@@ -127,7 +194,17 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
         availableUsers={availableUsers || []}
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col">
+      <div 
+        className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col"
+        ref={containerRef}
+        onScroll={handleScroll}
+      >
+        {isLoadingOlder && (
+          <div className="flex justify-center py-2 shrink-0">
+            <Loader2 className="w-5 h-5 animate-spin text-brand-400" />
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-white/40">
             No messages yet. Send a message to start the conversation!
@@ -139,7 +216,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             const initial = msg.user.full_name[0]?.toUpperCase() || '?';
 
             return (
-              <div key={msg.id} className={`flex gap-3 max-w-[80%] ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>
+              <div key={msg.id} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${isMine ? 'bg-brand-500/20 text-brand-300' : 'bg-indigo-500/20 text-indigo-300'}`}>
                   <span className="text-sm font-semibold">{initial}</span>
                 </div>
@@ -159,10 +236,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             );
           })
         )}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="shrink-0" />
       </div>
 
-      <div className="p-4 border-t border-white/10 bg-black/20">
+      <div className="p-4 border-t border-white/10 bg-black/20 shrink-0">
         <MessageForm conversationId={conversationId} />
       </div>
     </>

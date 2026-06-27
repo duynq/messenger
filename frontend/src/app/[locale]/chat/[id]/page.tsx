@@ -62,6 +62,7 @@ export default async function ChatRoomPage({
             token={token}
             conversation={conversation}
             availableUsers={availableUsers}
+            initialMeta={messagesData.meta}
           />
         </GlassCard>
       </div>
