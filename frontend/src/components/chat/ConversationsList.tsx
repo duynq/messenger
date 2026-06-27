@@ -16,6 +16,7 @@ interface Conversation {
   name: string | null;
   users: User[];
   created_at: string;
+  unread_count?: number;
 }
 
 interface Meta {
@@ -167,10 +168,17 @@ export function ConversationsList({
                     />
                   )}
                 </div>
-                <div className="overflow-hidden">
-                  <h4 className="text-white font-medium truncate" title={displayName}>
-                    {displayName}
-                  </h4>
+                <div className="overflow-hidden flex-1">
+                  <div className="flex justify-between items-center gap-2">
+                    <h4 className="text-white font-medium truncate" title={displayName}>
+                      {displayName}
+                    </h4>
+                    {!!conversation.unread_count && conversation.unread_count > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                      </span>
+                    )}
+                  </div>
                   {conversation.is_group && (
                     <p className="text-white/50 text-xs truncate">Group Chat</p>
                   )}

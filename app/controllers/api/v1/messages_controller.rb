@@ -9,6 +9,9 @@ module Api
           return render json: { error: 'Unauthorized' }, status: :forbidden
         end
 
+        participant = @conversation.conversation_participants.find_by(user_id: Current.user.id)
+        participant&.update(last_read_at: Time.current)
+
         scope = @conversation.messages.includes(:user).order(id: :desc)
 
         if params[:before_message_id].present?

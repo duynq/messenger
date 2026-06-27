@@ -21,6 +21,14 @@ module Api
         }, status: :ok
       end
 
+      def read
+        conversation = Current.user.conversations.find(params[:id])
+        participant = conversation.conversation_participants.find_by(user_id: Current.user.id)
+        participant&.update!(last_read_at: Time.current)
+
+        render json: { success: true }
+      end
+
       def direct
         result = Conversations::DirectCreationService.call(Current.user, params[:user_id])
 

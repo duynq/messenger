@@ -21,6 +21,9 @@ Rails.application.routes.draw do
 
       # Conversations
       resources :conversations, only: [:index] do
+        member do
+          patch :read
+        end
         resources :messages, only: [:index, :create]
         resources :participants, only: [:create, :destroy]
         collection do

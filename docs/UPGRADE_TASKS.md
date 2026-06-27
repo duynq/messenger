@@ -376,25 +376,165 @@ Trong DM, hiển thị trạng thái tin nhắn: đã gửi ✓, đã đọc ✓
 
 ---
 
-### Task 4.2 — In-app notification center
+### Task 4.2 — Notification System
+
+> **Tài liệu thiết kế chi tiết:** [NOTIFICATION_SYSTEM_DESIGN.md](./NOTIFICATION_SYSTEM_DESIGN.md)
+
+Hệ thống notification được chia thành các subtask sau:
+
+---
+
+#### Task 4.2.1 — Database Schema & Models
 
 **Mô tả:**  
-Bell icon trên header hiển thị thông báo: tin nhắn mới, được thêm vào group, v.v.
+Tạo database schema cho hệ thống notification với đầy đủ tables: `notifications`, `notification_deliveries`, `push_subscriptions`.
 
 **Phạm vi:**
-- Migration: bảng `notifications` (`user_id`, `type`, `data` JSONB, `read_at`)
-- Backend: tạo notification khi có tin mới (user không đang trong conversation)
-- API: `GET /notifications`, `PATCH /notifications/:id/read`, `POST /notifications/read_all`
-- Frontend: `NotificationBell` component + dropdown list
-- Real-time: broadcast qua `NotificationChannel`
+- Migration: `create_notifications` table
+- Migration: `create_notification_deliveries` table
+- Migration: `create_push_subscriptions` table
+- Migration: thêm `notification_preferences` JSONB vào `users`
+- Migration: thêm `muted_at` vào `conversation_participants`
+- Models: `Notification`, `NotificationDelivery`, `PushSubscription`
+- Blueprints: `NotificationBlueprint`
 
 **Tiêu chí hoàn thành:**
-- [ ] Badge số notification chưa đọc
-- [ ] Click notification → navigate tới conversation
-- [ ] Mark read individual / mark all read
-- [ ] Không notify tin trong conversation đang mở
+- [ ] Tất cả migrations chạy thành công
+- [ ] Models có đầy đủ associations và validations
+- [ ] Indexes tối ưu cho queries thường dùng
+- [ ] Seeds có sample notifications để test
 
-**Effort:** ~8–12 giờ | **Priority:** P1
+**Effort:** ~3–4 giờ | **Priority:** P1
+
+---
+
+#### Task 4.2.2 — Notification Creation Service
+
+**Mô tả:**
+Service layer để tạo notifications với đầy đủ business logic: check preferences, mute status, quiet hours.
+
+**Phạm vi:**
+- `Notifications::CreationService` — main service
+- `Notifications::PreferencesService` — get cached preferences
+- `Notifications::QuietHoursChecker` — check quiet hours
+- Integrate vào `Messages::CreationService` để trigger notification
+- Integrate vào `Conversations::GroupCreationService` cho added_to_group
+- Integrate vào `ParticipantsController` cho add/remove participant
+
+**Tiêu chí hoàn thành:**
+- [ ] Notification được tạo khi có tin nhắn mới
+- [ ] Không notify user đang gửi tin (actor)
+- [ ] Không notify nếu conversation bị mute
+- [ ] Không notify nếu type bị disable trong preferences
+- [ ] User preferences được cache (Redis, TTL 5 phút)
+
+**Effort:** ~4–6 giờ | **Priority:** P1
+
+---
+
+#### Task 4.2.3 — In-App Delivery (ActionCable)
+
+**Mô tả:**
+Delivery channel đầu tiên: real-time in-app notifications qua ActionCable.
+
+**Phạm vi:**
+- `NotificationChannel` — ActionCable channel
+- `NotificationDeliveryJob` — Sidekiq job cho in_app channel
+- Duplicate prevention: distributed lock (Redis) + optimistic locking (DB)
+- Retry logic với exponential backoff
+
+**Tiêu chí hoàn thành:**
+- [ ] Notification broadcast real-time khi có tin mới
+- [ ] Không có duplicate notifications (race condition handled)
+- [ ] Failed deliveries được retry tự động
+- [ ] Sau max retries → move to failed status
+
+**Gợi ý kỹ thuật:**
+```ruby
+# Distributed lock pattern
+Kredis.with_lock("notif_delivery:#{id}", expires_in: 30.seconds) do
+  delivery.reload
+  return if delivery.delivered?
+  # ... process delivery
+end
+```
+
+**Effort:** ~4–6 giờ | **Priority:** P1
+
+---
+
+#### Task 4.2.4 — REST API Endpoints
+
+**Mô tả:**
+API endpoints để list, read, delete notifications.
+
+**Phạm vi:**
+- `NotificationsController#index` — list với pagination
+- `NotificationsController#unread_count` — get count
+- `NotificationsController#read` — mark single as read
+- `NotificationsController#read_all` — mark all as read
+- `NotificationsController#destroy` — delete notification
+- Swagger documentation
+
+**Tiêu chí hoàn thành:**
+- [ ] GET `/notifications` trả về paginated list
+- [ ] GET `/notifications/unread_count` trả về số chưa đọc
+- [ ] PATCH `/notifications/:id/read` mark as read
+- [ ] POST `/notifications/read_all` mark all as read
+- [ ] Swagger specs đầy đủ
+
+**Effort:** ~3–4 giờ | **Priority:** P1
+
+---
+
+#### Task 4.2.5 — Frontend: NotificationProvider & UI
+
+**Mô tả:**
+Frontend components để hiển thị và quản lý notifications.
+
+**Phạm vi:**
+- `NotificationProvider` — React context + ActionCable subscription
+- `NotificationBell` — Bell icon với badge + dropdown
+- `NotificationItem` — Single notification component
+- `NotificationList` — Full page list (optional)
+- Integration vào `AppLayout`
+- i18n cho notification texts
+
+**Tiêu chí hoàn thành:**
+- [ ] Bell icon hiển thị unread count badge
+- [ ] Click bell → dropdown với recent notifications
+- [ ] Click notification → navigate + mark as read
+- [ ] "Mark all as read" button hoạt động
+- [ ] Real-time update khi có notification mới
+- [ ] Responsive trên mobile
+
+**Effort:** ~6–8 giờ | **Priority:** P1
+
+---
+
+#### Task 4.2.6 — Notification Preferences UI
+
+**Mô tả:**
+UI trong Settings để user cấu hình notification preferences.
+
+**Phạm vi:**
+- `NotificationPreferencesController` — API endpoint
+- Frontend: section trong Settings page
+- Toggle cho từng channel (in_app, web_push, email)
+- Toggle cho từng notification type
+- Quiet hours configuration (optional)
+
+**Tiêu chí hoàn thành:**
+- [ ] User có thể enable/disable từng channel
+- [ ] User có thể enable/disable từng notification type
+- [ ] Settings được lưu và áp dụng ngay
+- [ ] Cache invalidation khi update preferences
+
+**Effort:** ~4–6 giờ | **Priority:** P2
+
+---
+
+**Tổng Effort Task 4.2:** ~24–34 giờ | **Priority:** P1
 
 ---
 
@@ -510,22 +650,91 @@ User tìm kiếm tin nhắn theo keyword trong toàn bộ conversations hoặc t
 
 ### Task 5.2 — Push notifications (Web Push)
 
+> **Tài liệu thiết kế:** [NOTIFICATION_SYSTEM_DESIGN.md](./NOTIFICATION_SYSTEM_DESIGN.md) — Section 6, 10
+
 **Mô tả:**  
-Gửi push notification tới browser khi user offline/background tab và có tin mới.
+Mở rộng Notification System (Task 4.2) để hỗ trợ Web Push channel. Gửi push notification tới browser khi user offline/background tab.
+
+**Phụ thuộc:** Task 4.2 (Notification System) phải hoàn thành trước.
 
 **Phạm vi:**
-- Service Worker trong Next.js
-- Backend: lưu push subscription, gửi qua Web Push API (VAPID)
-- Gem: `webpush` hoặc tương đương
-- Frontend: prompt permission, subscribe/unsubscribe trong Settings
-- Tôn trọng mute settings (Task 4.3)
+
+*Backend:*
+- Setup VAPID keys (credentials)
+- Gem: `web-push` hoặc `webpush`
+- `PushSubscriptionsController` — register/unregister subscriptions
+- Mở rộng `NotificationDeliveryJob` cho web_push channel
+- Handle expired subscriptions (mark inactive)
+
+*Frontend:*
+- Service Worker (`public/sw.js`)
+- `usePushNotifications` hook — request permission, subscribe
+- Permission prompt UI trong Settings
+- Push notification click → open correct URL
 
 **Tiêu chí hoàn thành:**
-- [ ] User grant permission → nhận push khi tab background
+- [ ] VAPID keys được setup an toàn trong credentials
+- [ ] User có thể grant/deny push permission
+- [ ] Push subscription được lưu DB khi granted
+- [ ] Notification gửi qua Web Push API thành công
 - [ ] Click push → mở đúng conversation
-- [ ] Unsubscribe hoạt động
+- [ ] Expired subscription tự động deactivate
+- [ ] Tôn trọng mute settings + preferences
+
+**Gợi ý kỹ thuật:**
+```javascript
+// Service Worker (sw.js)
+self.addEventListener('push', (event) => {
+  const data = event.data.json();
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/notification-icon.png',
+      data: { url: data.data.url }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data.url));
+});
+```
 
 **Effort:** ~12–16 giờ | **Priority:** P3
+
+---
+
+### Task 5.2b — Email notifications
+
+> **Tài liệu thiết kế:** [NOTIFICATION_SYSTEM_DESIGN.md](./NOTIFICATION_SYSTEM_DESIGN.md) — Section 5, 10
+
+**Mô tả:**
+Mở rộng Notification System để hỗ trợ Email channel. Bao gồm instant email và email digest (daily/weekly).
+
+**Phụ thuộc:** Task 4.2 (Notification System) phải hoàn thành trước.
+
+**Phạm vi:**
+
+*Backend:*
+- `NotificationMailer` với các templates
+- Mở rộng `NotificationDeliveryJob` cho email channel
+- `EmailDigestJob` — scheduled job gửi digest
+- Unsubscribe token + link
+- Email templates (HTML + text)
+
+*Frontend:*
+- Email digest preference trong Settings (none/instant/daily/weekly)
+- Unsubscribe landing page
+
+**Tiêu chí hoàn thành:**
+- [ ] Instant email gửi khi user chọn preference
+- [ ] Daily/weekly digest job chạy đúng schedule
+- [ ] Email có link unsubscribe hoạt động
+- [ ] Email templates đẹp, responsive
+- [ ] Tôn trọng mute settings + preferences
+
+**Effort:** ~8–12 giờ | **Priority:** P3
 
 ---
 
@@ -652,9 +861,9 @@ Client mới connect không biết ai đang online. Cần gửi snapshot danh s�
 | Priority | Tasks |
 |----------|-------|
 | **P0** | 1.1 |
-| **P1** | 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 3.1, 3.2, 3.4, 4.1, 4.2 |
-| **P2** | 1.5, 2.4, 2.5, 3.3, 4.3, 4.4, 4.5, 4.6, 5.5, 5.6, 5.7, 5.8 |
-| **P3** | 5.1, 5.2, 5.3, 5.4 |
+| **P1** | 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 3.1, 3.2, 3.4, 4.1, **4.2.1–4.2.5** |
+| **P2** | 1.5, 2.4, 2.5, 3.3, 4.3, 4.4, 4.5, 4.6, **4.2.6**, 5.5, 5.6, 5.7, 5.8 |
+| **P3** | 5.1, 5.2, **5.2b**, 5.3, 5.4 |
 
 ---
 
@@ -664,10 +873,19 @@ Client mới connect không biết ai đang online. Cần gửi snapshot danh s�
 Phase 1:  1.1 → 1.5 → 1.3 → 1.2 → 1.4
 Phase 2:  2.1 → 2.2 → 2.3 → 2.5 → 2.4
 Phase 3:  3.4 → 3.2 → 3.1 → 3.3
-Phase 4:  4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6
-Phase 5:  5.8 → 5.5 → 5.6 → 5.7 → (5.1–5.4 tùy nhu cầu)
+Phase 4:  4.1 → 4.2.1 → 4.2.2 → 4.2.3 → 4.2.4 → 4.2.5 → 4.2.6 → 4.3 → 4.4 → 4.5 → 4.6
+Phase 5:  5.8 → 5.5 → 5.6 → 5.7 → 5.2 → 5.2b → (5.1, 5.3, 5.4 tùy nhu cầu)
 ```
 
 ---
 
-*Tài liệu tạo ngày: 2026-06-27. Cập nhật khi hoàn thành task — đánh dấu `[x]` trong tiêu chí hoàn thành.*
+## Tài liệu liên quan
+
+| Document | Mô tả |
+|----------|-------|
+| [NOTIFICATION_SYSTEM_DESIGN.md](./NOTIFICATION_SYSTEM_DESIGN.md) | Thiết kế chi tiết hệ thống Notification |
+
+---
+
+*Tài liệu tạo ngày: 2026-06-27. Cập nhật lần cuối: 2026-06-27.*
+*Đánh dấu `[x]` trong tiêu chí hoàn thành khi hoàn thành task.*
