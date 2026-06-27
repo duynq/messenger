@@ -53,7 +53,7 @@ export async function sendMessageAction(conversationId: number, content: string)
   try {
     const response = await serverFetch(`/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ message: { content } }),
     });
 
     await handleUnauthorized(response);
