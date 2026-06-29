@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_29_213458) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_29_214923) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -82,9 +82,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_29_213458) do
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
     t.datetime "edited_at"
+    t.bigint "reply_to_id"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["deleted_at"], name: "index_messages_on_deleted_at"
+    t.index ["reply_to_id"], name: "index_messages_on_reply_to_id"
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
@@ -108,5 +110,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_29_213458) do
   add_foreign_key "conversation_participants", "users"
   add_foreign_key "conversations", "users", column: "admin_id"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "messages", "messages", column: "reply_to_id"
   add_foreign_key "messages", "users"
 end

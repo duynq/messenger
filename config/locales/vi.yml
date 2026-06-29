@@ -9,3 +9,4 @@ vi:
     message_not_found: "Không tìm thấy tin nhắn"
     conversation_not_found: "Không tìm thấy cuộc trò chuyện"
     edit_time_exceeded: "Tin nhắn đã quá 15 phút, không thể chỉnh sửa"
+    invalid_reply_message: "Không thể trả lời tin nhắn này (có thể tin nhắn đã bị xóa)"

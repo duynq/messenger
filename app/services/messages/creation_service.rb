@@ -1,18 +1,20 @@
 module Messages
   class CreationService
-    def self.call(conversation:, user:, content:)
-      new(conversation: conversation, user: user, content: content).call
+    def self.call(conversation:, user:, content:, reply_to_id: nil)
+      new(conversation: conversation, user: user, content: content, reply_to_id: reply_to_id).call
     end
 
-    def initialize(conversation:, user:, content:)
+    def initialize(conversation:, user:, content:, reply_to_id: nil)
       @conversation = conversation
       @user = user
       @content = content
+      @reply_to_id = reply_to_id
     end
 
     def call
       return unauthorized_error unless authorized?
       return invalid_content_error if @content.blank?
+      return invalid_reply_error unless valid_reply?
 
       message = create_message_and_update_conversation
       broadcast_new_message(message)
@@ -27,6 +29,13 @@ module Messages
       @conversation.users.include?(@user)
     end
 
+    def valid_reply?
+      return true if @reply_to_id.blank?
+
+      replied_msg = Message.find_by(id: @reply_to_id)
+      replied_msg.present? && replied_msg.conversation_id == @conversation.id && !replied_msg.deleted?
+    end
+
     def unauthorized_error
       Result.failure(error_payload(I18n.t('errors.unauthorized'), :forbidden))
     end
@@ -35,12 +44,16 @@ module Messages
       Result.failure(error_payload('Content cannot be empty', :unprocessable_entity))
     end
 
+    def invalid_reply_error
+      Result.failure(error_payload(I18n.t('errors.invalid_reply_message', default: 'Invalid reply message'), :unprocessable_entity))
+    end
+
     def error_payload(msg, status)
       { message: msg, status: status }
     end
 
     def create_message_and_update_conversation
-      message = @conversation.messages.create!(user: @user, content: @content)
+      message = @conversation.messages.create!(user: @user, content: @content, reply_to_id: @reply_to_id)
       @conversation.update_column(:last_message_at, message.created_at)
       message
     end

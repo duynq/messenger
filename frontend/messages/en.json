@@ -108,6 +108,8 @@
     "editMessage": "Edit message",
     "edited": "edited",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "reply": "Reply",
+    "replyingTo": "Replying to"
   }
 }
