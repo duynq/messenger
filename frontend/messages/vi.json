@@ -104,6 +104,10 @@
     "groupChat": "Nhóm Chat",
     "continueChat": "Tiếp tục Chat",
     "messageDeleted": "Tin nhắn đã bị xóa",
-    "deleteMessage": "Xóa tin nhắn"
+    "deleteMessage": "Xóa tin nhắn",
+    "editMessage": "Sửa tin nhắn",
+    "edited": "đã chỉnh sửa",
+    "cancel": "Hủy",
+    "save": "Lưu"
   }
 }

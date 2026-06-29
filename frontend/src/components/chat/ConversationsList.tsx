@@ -108,6 +108,22 @@ export function ConversationsList({
               }
               return prev;
             });
+          } else if (data.action === 'message_updated' && data.conversation_id && data.last_message) {
+            setRealtimeConversations(prev => {
+              const idx = prev.findIndex(c => c.id === data.conversation_id);
+              if (idx !== -1) {
+                const newConvs = [...prev];
+                const conv = newConvs[idx];
+                if (conv.last_message && conv.last_message.created_at === data.last_message.created_at) {
+                  newConvs[idx] = {
+                    ...conv,
+                    last_message: data.last_message
+                  };
+                }
+                return newConvs;
+              }
+              return prev;
+            });
           }
         }
       }

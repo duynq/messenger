@@ -104,6 +104,10 @@
     "groupChat": "Group Chat",
     "continueChat": "Continue Chat",
     "messageDeleted": "Message has been deleted",
-    "deleteMessage": "Delete message"
+    "deleteMessage": "Delete message",
+    "editMessage": "Edit message",
+    "edited": "edited",
+    "cancel": "Cancel",
+    "save": "Save"
   }
 }

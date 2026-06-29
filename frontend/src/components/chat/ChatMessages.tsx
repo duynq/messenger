@@ -5,9 +5,9 @@ import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2 } from 'lucide-react';
+import { Settings2, Loader2, Trash2, Pencil, X, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { deleteMessageAction } from '@/actions/chat';
+import { deleteMessageAction, updateMessageAction } from '@/actions/chat';
 
 type User = {
   id: number;
@@ -21,6 +21,7 @@ type Message = {
   created_at: string;
   user: User;
   deleted?: boolean;
+  edited_at?: string;
 };
 
 type ChatMessagesProps = {
@@ -52,6 +53,9 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<number, string>>({});
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -149,6 +153,19 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     }
   };
 
+  const handleUpdateMessage = async (messageId: number) => {
+    if (!editingContent.trim() || isUpdating) return;
+    setIsUpdating(true);
+    const result = await updateMessageAction(conversationId, messageId, editingContent);
+    setIsUpdating(false);
+    if (result.success) {
+      setEditingMessageId(null);
+    } else {
+      // In a real app we might show a toast, here we'll just log
+      console.error(result.error);
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
 
@@ -184,6 +201,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
           } else if (data.action === 'message_deleted') {
             setMessages(prev => prev.map(msg =>
               msg.id === data.message_id ? { ...msg, deleted: true, content: '' } : msg
+            ));
+          } else if (data.action === 'message_updated') {
+            setMessages(prev => prev.map(msg =>
+              msg.id === data.message.id ? data.message : msg
             ));
           } else if (data.message) {
             // Remove sender from typing users when they send a message
@@ -298,28 +319,72 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                   <span className="text-sm font-semibold">{initial}</span>
                 </div>
                 
-                <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group relative`}>
+                <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group relative min-w-[120px]`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-sm font-medium text-white/80">
                       {isMine ? 'You' : msg.user.full_name}
                     </span>
                     <span className="text-xs text-white/40" suppressHydrationWarning>{time}</span>
                   </div>
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm flex items-center gap-2 ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'}`}>
-                    {msg.deleted ? (
-                      <span className="italic text-white/50">{t('messageDeleted')}</span>
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
-                  {isMine && !msg.deleted && (
-                    <button
-                      onClick={() => deleteMessageAction(conversationId, msg.id)}
-                      className="absolute top-1/2 -translate-y-1/2 -left-8 p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                      title={t('deleteMessage')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+
+                  {editingMessageId === msg.id ? (
+                    <div className="flex flex-col gap-2 w-full min-w-[200px] bg-white/10 p-2 rounded-xl">
+                      <input
+                        type="text"
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        className="w-full bg-black/20 text-white text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-brand-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateMessage(msg.id);
+                          if (e.key === 'Escape') setEditingMessageId(null);
+                        }}
+                      />
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => setEditingMessageId(null)} className="p-1 text-white/50 hover:text-white rounded-md hover:bg-white/10" title={t('cancel')}>
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleUpdateMessage(msg.id)} disabled={isUpdating} className="p-1 text-green-400 hover:text-green-300 rounded-md hover:bg-green-500/10" title={t('save')}>
+                          {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm flex flex-col gap-1 ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'}`}>
+                      <div className="flex items-center gap-2">
+                        {msg.deleted ? (
+                          <span className="italic text-white/50">{t('messageDeleted')}</span>
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                      {msg.edited_at && !msg.deleted && (
+                        <span className={`text-[10px] ${isMine ? 'text-brand-200' : 'text-white/40'} self-end italic leading-none`}>
+                          {t('edited')}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {isMine && !msg.deleted && editingMessageId !== msg.id && (
+                    <div className="absolute top-1/2 -translate-y-1/2 -left-16 flex items-center opacity-0 group-hover:opacity-100 transition-all">
+                      {Date.now() - new Date(msg.created_at).getTime() < 15 * 60 * 1000 && (
+                        <button
+                          onClick={() => { setEditingMessageId(msg.id); setEditingContent(msg.content); }}
+                          className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg"
+                          title={t('editMessage')}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteMessageAction(conversationId, msg.id)}
+                        className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                        title={t('deleteMessage')}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

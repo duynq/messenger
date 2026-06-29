@@ -19,6 +19,14 @@ module Api
         render_service_result(result, :created) { |value| { message: MessageBlueprint.render_as_hash(value) } }
       end
 
+      def update
+        message = @conversation.messages.find_by(id: params[:id])
+        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless message
+
+        result = Messages::UpdateService.call(message: message, user: Current.user, content: message_params[:content])
+        render_service_result(result, :ok) { |value| { message: MessageBlueprint.render_as_hash(value) } }
+      end
+
       def destroy
         message = @conversation.messages.find_by(id: params[:id])
         return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless message

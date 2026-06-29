@@ -167,3 +167,23 @@ export async function deleteMessageAction(conversationId: number, messageId: num
     return { error: 'Unexpected error occurred' };
   }
 }
+
+export async function updateMessageAction(conversationId: number, messageId: number, content: string) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ message: { content } }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to update message' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
