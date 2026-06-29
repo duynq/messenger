@@ -12,18 +12,27 @@ module Messages
     end
 
     def call
-      return unauthorized_error unless authorized?
-      return invalid_content_error if @content.blank?
-      return invalid_reply_error unless valid_reply?
+      return validation_error if validation_error
 
-      message = create_message_and_update_conversation
-      broadcast_new_message(message)
-      Result.success(message)
+      process_creation
     rescue => e
       Result.failure(error_payload(e.message, :unprocessable_entity))
     end
 
     private
+
+    def process_creation
+      message = create_message_and_update_conversation
+      broadcast_new_message(message)
+      Result.success(message)
+    end
+
+    def validation_error
+      return unauthorized_error unless authorized?
+      return invalid_content_error if @content.blank?
+
+      invalid_reply_error unless valid_reply?
+    end
 
     def authorized?
       @conversation.users.include?(@user)
