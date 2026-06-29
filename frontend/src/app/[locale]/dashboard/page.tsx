@@ -78,7 +78,7 @@ export default async function DashboardPage({
           </GlassCard>
         </div>
 
-        {conversationsData.conversations && conversationsData.conversations.length > 0 && (
+        {conversationsData.conversations && (
           <div className="mb-8">
             <ConversationsList 
               conversations={conversationsData.conversations} 

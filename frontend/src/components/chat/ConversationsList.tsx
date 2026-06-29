@@ -4,7 +4,8 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { MessageCircle, Loader2 } from 'lucide-react';
+import { MessageCircle, Loader2, MessageSquarePlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { formatTimeAgo } from '@/lib/utils';
 import { createConsumer } from '@rails/actioncable';
 import type { User } from '@/components/providers/AuthProvider';
@@ -56,6 +57,7 @@ export function ConversationsList({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [realtimeConversations, setRealtimeConversations] = useState<Conversation[]>(conversations);
   const { getUserPresence } = usePresence();
+  const t = useTranslations('chat');
 
   useEffect(() => {
     setRealtimeConversations(conversations);
@@ -142,7 +144,7 @@ export function ConversationsList({
   return (
     <div className="space-y-6 relative mb-12 mt-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h3 className="text-xl font-semibold text-white">Recent Conversations</h3>
+        <h3 className="text-xl font-semibold text-white">{t('recentConversations')}</h3>
 
         <div className="flex items-center gap-3">
           <div className="flex bg-white/5 rounded-xl p-1 w-fit">
@@ -154,7 +156,7 @@ export function ConversationsList({
                   : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
-              All
+              {t('filterAll')}
             </button>
             <button
               onClick={() => handleFilterChange('active')}
@@ -164,7 +166,7 @@ export function ConversationsList({
                   : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
-              Active
+              {t('filterActive')}
             </button>
           </div>
 
@@ -172,7 +174,7 @@ export function ConversationsList({
             onClick={() => setIsCreateModalOpen(true)}
             className="px-4 py-1.5 h-auto text-sm bg-indigo-500 hover:bg-indigo-600 border-0"
           >
-            + New Group
+            {t('newGroup')}
           </AnimatedButton>
         </div>
       </div>
@@ -191,11 +193,27 @@ export function ConversationsList({
       )}
 
       {realtimeConversations.length === 0 ? (
-        <div className="text-center text-white/50 py-12 border border-white/10 rounded-2xl bg-white/5">
-          {currentFilter === 'active'
-            ? 'No active conversations found.'
-            : 'No conversations yet.'}
-        </div>
+        currentFilter === 'active' ? (
+          <div className="text-center text-white/50 py-12 border border-white/10 rounded-2xl bg-white/5">
+            {t('noActiveConversations')}
+          </div>
+        ) : (
+          <div className="text-center py-16 px-4 border border-white/10 rounded-2xl bg-white/5 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-brand-500/20 flex items-center justify-center mb-4">
+              <MessageSquarePlus className="w-8 h-8 text-brand-400" />
+            </div>
+            <h4 className="text-xl font-medium text-white mb-2">{t('emptyStateTitle')}</h4>
+            <p className="text-white/50 text-sm max-w-md mx-auto mb-6">
+              {t('emptyStateDescription')}
+            </p>
+            <AnimatedButton
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white border-0"
+            >
+              {t('createGroupCTA')}
+            </AnimatedButton>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {realtimeConversations.map(conversation => {
@@ -246,7 +264,7 @@ export function ConversationsList({
                       }
                     </p>
                   ) : conversation.is_group ? (
-                    <p className="text-white/50 text-xs truncate">Group Chat</p>
+                    <p className="text-white/50 text-xs truncate">{t('groupChat')}</p>
                   ) : null}
                 </div>
               </div>
@@ -257,7 +275,7 @@ export function ConversationsList({
                 className="w-full justify-center bg-brand-500 hover:bg-brand-600 text-white border-0 py-2"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
-                Continue Chat
+                {t('continueChat')}
               </AnimatedButton>
             </GlassCard>
           );
