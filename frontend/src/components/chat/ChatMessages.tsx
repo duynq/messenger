@@ -423,7 +423,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                           <SmilePlus className="w-4 h-4" />
                         </button>
                         {reactingToMessageId === msg.id && (
-                          <div className={`absolute top-1/2 -translate-y-1/2 ${isMine ? 'right-full mr-2' : 'left-full ml-2'} flex gap-1 bg-[#1a1a1a] border border-white/10 p-1 rounded-full shadow-xl z-10`}>
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-1 bg-[#1a1a1a] border border-white/10 p-1 rounded-full shadow-xl z-50">
                             {EMOJIS.map(e => (
                               <button
                                 key={e}
