@@ -187,3 +187,23 @@ export async function updateMessageAction(conversationId: number, messageId: num
     return { error: 'Unexpected error occurred' };
   }
 }
+
+export async function reactToMessageAction(conversationId: number, messageId: number, emoji: string) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/messages/${messageId}/react`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to add reaction' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
