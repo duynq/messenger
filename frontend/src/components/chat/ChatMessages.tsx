@@ -63,6 +63,27 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (!token || !conversationId) return;
+
+    const markAsRead = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+        await fetch(`${apiUrl}/conversations/${conversationId}/read`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+      } catch (e) {
+        console.error('Failed to mark as read', e);
+      }
+    };
+
+    markAsRead();
+  }, [messages.length, conversationId, token]);
+
   const loadOlderMessages = async () => {
     if (!nextCursor || isLoadingOlder) return;
     setIsLoadingOlder(true);
