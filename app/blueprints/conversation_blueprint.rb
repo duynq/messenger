@@ -1,7 +1,18 @@
 class ConversationBlueprint < Blueprinter::Base
   identifier :id
 
-  fields :is_group, :name, :admin_id, :created_at
+  fields :is_group, :name, :admin_id, :created_at, :last_message_at
+
+  field :last_message do |conversation, _options|
+    msg = conversation.messages.includes(:user).order(id: :desc).first
+    if msg
+      {
+        content: msg.content.truncate(50),
+        sender_name: msg.user.full_name,
+        created_at: msg.created_at
+      }
+    end
+  end
 
   field :unread_count do |conversation, _options|
     participant = conversation.conversation_participants.find { |cp| cp.user_id == Current.user&.id } || conversation.conversation_participants.find_by(user_id: Current.user&.id)

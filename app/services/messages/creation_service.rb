@@ -15,8 +15,15 @@ module Messages
       return Result.failure({ message: 'Content cannot be empty', status: :unprocessable_entity }) if @content.blank?
 
       message = @conversation.messages.create!(user: @user, content: @content)
+      @conversation.update_column(:last_message_at, message.created_at)
 
       message_hash = MessageBlueprint.render_as_hash(message)
+
+      last_message_preview = {
+        content: @content.truncate(50),
+        sender_name: @user.full_name,
+        created_at: message.created_at
+      }
 
       ActionCable.server.broadcast(
         "conversation_#{@conversation.id}",
@@ -29,7 +36,8 @@ module Messages
           {
             action: 'new_message',
             conversation_id: @conversation.id,
-            message: message_hash
+            message: message_hash,
+            last_message: last_message_preview
           }
         )
       end

@@ -12,7 +12,7 @@ module Api
           scope,
           count: count,
           includes: :users,
-          order: { created_at: :desc, id: :desc }
+          order: Arel.sql('last_message_at DESC NULLS LAST, id DESC')
         )
 
         render json: {
