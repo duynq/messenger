@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
@@ -35,17 +35,27 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
+function formatTypingText(typingUsers: Record<number, string>): string {
+  const names = Object.values(typingUsers);
+  if (names.length === 1) return `${names[0]} is typing...`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
+  return `${names[0]}, ${names[1]} and ${names.length - 2} others are typing...`;
+}
+
 export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers, initialMeta }: ChatMessagesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [hasNext, setHasNext] = useState(initialMeta?.has_next || false);
   const [nextCursor, setNextCursor] = useState<number | null>(initialMeta?.next_cursor || null);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Record<number, string>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef(true);
   const isInitialRender = useRef(true);
+  const typingTimers = useRef<Record<number, NodeJS.Timeout>>({});
+  const subscriptionRef = useRef<any>(null);
   const { getUserPresence } = usePresence();
 
   const scrollToBottom = () => {
@@ -146,18 +156,56 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     const subscription = consumer.subscriptions.create(
       { channel: 'ConversationChannel', conversation_id: conversationId },
       {
-        received(data: { message: Message }) {
-          setMessages((prevMessages) => {
-            if (prevMessages.some((msg) => msg.id === data.message.id)) {
-              return prevMessages;
+        received(data: any) {
+          if (data.type === 'typing') {
+            // Ignore typing events from ourselves
+            if (data.user_id === currentUser.id) return;
+
+            setTypingUsers(prev => ({
+              ...prev,
+              [data.user_id]: data.user_name
+            }));
+
+            // Clear existing timer for this user
+            if (typingTimers.current[data.user_id]) {
+              clearTimeout(typingTimers.current[data.user_id]);
             }
-            return [...prevMessages, data.message];
-          });
+            // Auto-remove after 3s of no typing
+            typingTimers.current[data.user_id] = setTimeout(() => {
+              setTypingUsers(prev => {
+                const { [data.user_id]: _, ...rest } = prev;
+                return rest;
+              });
+            }, 3000);
+          } else if (data.message) {
+            // Remove sender from typing users when they send a message
+            if (data.message.user?.id) {
+              setTypingUsers(prev => {
+                const { [data.message.user.id]: _, ...rest } = prev;
+                return rest;
+              });
+              if (typingTimers.current[data.message.user.id]) {
+                clearTimeout(typingTimers.current[data.message.user.id]);
+              }
+            }
+
+            setMessages((prevMessages) => {
+              if (prevMessages.some((msg) => msg.id === data.message.id)) {
+                return prevMessages;
+              }
+              return [...prevMessages, data.message];
+            });
+          }
         }
       }
     );
+    subscriptionRef.current = subscription;
 
     return () => {
+      subscriptionRef.current = null;
+      // Clear all typing timers
+      Object.values(typingTimers.current).forEach(clearTimeout);
+      typingTimers.current = {};
       subscription.unsubscribe();
       consumer.disconnect();
     };
@@ -260,8 +308,21 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
         <div ref={messagesEndRef} className="shrink-0" />
       </div>
 
+      {Object.keys(typingUsers).length > 0 && (
+        <div className="px-6 py-2 shrink-0 border-t border-white/5">
+          <div className="flex items-center gap-2 text-xs text-white/50">
+            <div className="flex gap-0.5">
+              <span className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce [animation-delay:300ms]" />
+            </div>
+            <span>{formatTypingText(typingUsers)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 border-t border-white/10 bg-black/20 shrink-0">
-        <MessageForm conversationId={conversationId} />
+        <MessageForm conversationId={conversationId} subscriptionRef={subscriptionRef} />
       </div>
     </>
   );

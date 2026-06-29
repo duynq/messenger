@@ -1,14 +1,24 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useRef, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { sendMessageAction } from '@/actions/chat';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { toast } from 'sonner';
 
-export function MessageForm({ conversationId }: { conversationId: number }) {
+export function MessageForm({ conversationId, subscriptionRef }: { conversationId: number; subscriptionRef?: React.RefObject<any> }) {
   const [content, setContent] = useState('');
   const [isPending, startTransition] = useTransition();
+  const lastTypingEmit = useRef<number>(0);
+
+  const emitTyping = useCallback(() => {
+    const now = Date.now();
+    // Debounce: only emit once every 300ms
+    if (now - lastTypingEmit.current < 300) return;
+    lastTypingEmit.current = now;
+
+    subscriptionRef?.current?.perform('typing');
+  }, [subscriptionRef]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,12 +35,19 @@ export function MessageForm({ conversationId }: { conversationId: number }) {
     });
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    if (e.target.value.trim()) {
+      emitTyping();
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 items-center">
       <div className="flex-1">
         <textarea
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleChange}
           placeholder="Type your message..."
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none block"
           rows={1}
