@@ -108,6 +108,8 @@
     "editMessage": "Sửa tin nhắn",
     "edited": "đã chỉnh sửa",
     "cancel": "Hủy",
-    "save": "Lưu"
+    "save": "Lưu",
+    "reply": "Trả lời",
+    "replyingTo": "Đang trả lời"
   }
 }

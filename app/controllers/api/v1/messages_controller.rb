@@ -14,7 +14,7 @@ module Api
 
       def create
         result = Messages::CreationService.call(
-          conversation: @conversation, user: Current.user, content: message_params[:content]
+          conversation: @conversation, user: Current.user, content: message_params[:content], reply_to_id: message_params[:reply_to_id]
         )
         render_service_result(result, :created) { |value| { message: MessageBlueprint.render_as_hash(value) } }
       end
@@ -73,7 +73,7 @@ module Api
       end
 
       def message_params
-        params.require(:message).permit(:content)
+        params.require(:message).permit(:content, :reply_to_id)
       end
 
       def set_conversation
