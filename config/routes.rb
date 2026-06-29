@@ -24,7 +24,9 @@ Rails.application.routes.draw do
         member do
           patch :read
         end
-        resources :messages, only: [:index, :create, :destroy, :update]
+        resources :messages, only: [:index, :create, :destroy, :update] do
+          post :react, on: :member
+        end
         resources :participants, only: [:create, :destroy]
         collection do
           post :direct

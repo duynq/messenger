@@ -110,6 +110,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "reply": "Reply",
-    "replyingTo": "Replying to"
+    "replyingTo": "Replying to",
+    "reactMessage": "Add reaction"
   }
 }
