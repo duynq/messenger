@@ -5,7 +5,9 @@ import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2 } from 'lucide-react';
+import { Settings2, Loader2, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { deleteMessageAction } from '@/actions/chat';
 
 type User = {
   id: number;
@@ -18,6 +20,7 @@ type Message = {
   content: string;
   created_at: string;
   user: User;
+  deleted?: boolean;
 };
 
 type ChatMessagesProps = {
@@ -57,6 +60,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const typingTimers = useRef<Record<number, NodeJS.Timeout>>({});
   const subscriptionRef = useRef<any>(null);
   const { getUserPresence } = usePresence();
+  const t = useTranslations('chat');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -177,6 +181,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                 return rest;
               });
             }, 3000);
+          } else if (data.action === 'message_deleted') {
+            setMessages(prev => prev.map(msg =>
+              msg.id === data.message_id ? { ...msg, deleted: true, content: '' } : msg
+            ));
           } else if (data.message) {
             // Remove sender from typing users when they send a message
             if (data.message.user?.id) {
@@ -290,16 +298,29 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                   <span className="text-sm font-semibold">{initial}</span>
                 </div>
                 
-                <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group relative`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-sm font-medium text-white/80">
                       {isMine ? 'You' : msg.user.full_name}
                     </span>
                     <span className="text-xs text-white/40" suppressHydrationWarning>{time}</span>
                   </div>
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'}`}>
-                    {msg.content}
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm flex items-center gap-2 ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'}`}>
+                    {msg.deleted ? (
+                      <span className="italic text-white/50">{t('messageDeleted')}</span>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
+                  {isMine && !msg.deleted && (
+                    <button
+                      onClick={() => deleteMessageAction(conversationId, msg.id)}
+                      className="absolute top-1/2 -translate-y-1/2 -left-8 p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                      title={t('deleteMessage')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

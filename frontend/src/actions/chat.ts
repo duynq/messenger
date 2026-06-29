@@ -148,3 +148,22 @@ export async function removeParticipantAction(conversationId: number, userId: nu
     return { error: 'Unexpected error occurred' };
   }
 }
+
+export async function deleteMessageAction(conversationId: number, messageId: number) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/messages/${messageId}`, {
+      method: 'DELETE',
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to delete message' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}

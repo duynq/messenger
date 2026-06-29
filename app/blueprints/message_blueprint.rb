@@ -1,7 +1,15 @@
 class MessageBlueprint < Blueprinter::Base
   identifier :id
 
-  fields :content, :created_at
+  fields :created_at
+
+  field :deleted do |message, _|
+    message.deleted?
+  end
+
+  field :content do |message, _|
+    message.deleted? ? nil : message.content
+  end
 
   association :user, blueprint: UserBlueprint
 end

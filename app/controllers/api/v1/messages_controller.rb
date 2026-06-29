@@ -45,6 +45,22 @@ module Api
         end
       end
 
+      def destroy
+        message = @conversation.messages.find_by(id: params[:id])
+        return render json: { error: 'Message not found' }, status: :not_found unless message
+
+        result = Messages::DeletionService.call(
+          message: message,
+          user: Current.user
+        )
+
+        if result.success?
+          render json: { success: true }, status: :ok
+        else
+          render json: { error: result.error[:message] }, status: result.error[:status]
+        end
+      end
+
       private
 
       def message_params
