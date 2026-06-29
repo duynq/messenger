@@ -64,7 +64,8 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
-    "updatePassword": "Update Password"
+    "updatePassword": "Update Password",
+    "changeAvatar": "Change Avatar"
   },
   "errors": {
     "title": "Something went wrong",

@@ -49,7 +49,16 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
       <div className="md:hidden px-6 pb-6">
         {user && (
           <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
-            <span className="text-sm font-medium text-white">{user.full_name}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 overflow-hidden">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user.full_name[0]?.toUpperCase() || '?'
+                )}
+              </div>
+              <span className="text-sm font-medium text-white">{user.full_name}</span>
+            </div>
             <LanguageSwitcher />
           </div>
         )}
@@ -74,10 +83,20 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
         ))}
       </div>
 
-      {/* Footer (Desktop & Mobile) */}
       <div className="p-4 border-t border-white/5 space-y-4">
         <div className="hidden md:flex items-center justify-between px-2">
-          {user && <span className="text-sm font-medium text-white/80 truncate max-w-[120px]">{user.full_name}</span>}
+          {user && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 overflow-hidden">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user.full_name[0]?.toUpperCase() || '?'
+                )}
+              </div>
+              <span className="text-sm font-medium text-white/80 truncate max-w-[90px]">{user.full_name}</span>
+            </div>
+          )}
           <LanguageSwitcher />
         </div>
         

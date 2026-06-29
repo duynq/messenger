@@ -8,8 +8,13 @@ class UserBlueprint < Blueprinter::Base
     count > 0
   end
 
+  field :avatar_url do |user, _options|
+    if user.avatar.attached?
+      Rails.application.routes.url_helpers.rails_representation_url(user.avatar.variant(resize_to_limit: [100, 100]).processed)
+    end
+  end
+
   view :with_email_and_storage do
     fields :email, :first_name, :last_name
-
   end
 end

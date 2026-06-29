@@ -9,13 +9,19 @@ export async function updateAccountAction(
   prevState: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  const first_name = formData.get('first_name') as string;
-  const last_name = formData.get('last_name') as string;
+  const accountFormData = new FormData();
+  accountFormData.append('account[first_name]', formData.get('first_name') as string);
+  accountFormData.append('account[last_name]', formData.get('last_name') as string);
+
+  const avatar = formData.get('avatar') as File | null;
+  if (avatar && avatar.size > 0) {
+    accountFormData.append('account[avatar]', avatar);
+  }
 
   try {
     const response = await serverFetch('/account', {
       method: 'PATCH',
-      body: JSON.stringify({ account: { first_name, last_name } }),
+      body: accountFormData,
     });
 
     await handleUnauthorized(response);

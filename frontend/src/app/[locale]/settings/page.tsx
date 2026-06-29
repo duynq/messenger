@@ -11,6 +11,7 @@ type User = {
   last_name: string;
   full_name: string;
   email: string;
+  avatar_url?: string;
 };
 
 export default async function SettingsPage() {

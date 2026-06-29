@@ -212,19 +212,27 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
             <div className="space-y-2">
               {conversation.users.map((u: any) => (
                 <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white flex items-center gap-2">
-                      {u.full_name}
-                      {u.id === conversation.admin_id && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-md">Admin</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 overflow-hidden">
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        u.full_name[0]?.toUpperCase() || '?'
                       )}
-                      {u.id === currentUser.id && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-brand-500/20 text-brand-400 rounded-md">You</span>
-                      )}
-                    </span>
-                    <span className="text-xs text-white/50">{u.email}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-white flex items-center gap-2">
+                        {u.full_name}
+                        {u.id === conversation.admin_id && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-md">Admin</span>
+                        )}
+                        {u.id === currentUser.id && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-brand-500/20 text-brand-400 rounded-md">You</span>
+                        )}
+                      </span>
+                      <span className="text-xs text-white/50">{u.email}</span>
+                    </div>
                   </div>
-                  
                   {isAdmin && u.id !== currentUser.id && (
                     <button 
                       onClick={() => handleRemoveMember(u.id)}
