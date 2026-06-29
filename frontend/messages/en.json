@@ -112,6 +112,9 @@
     "reply": "Reply",
     "replyingTo": "Replying to",
     "reactMessage": "Add reaction",
-    "insertEmoji": "Insert emoji"
+    "insertEmoji": "Insert emoji",
+    "attachFile": "Attach file",
+    "fileTooLarge": "File is too large. Max size is 10MB.",
+    "attachment": "Attachment"
   }
 }

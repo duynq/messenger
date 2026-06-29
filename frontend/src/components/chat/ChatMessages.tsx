@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft, SmilePlus } from 'lucide-react';
+import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft, SmilePlus, FileDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction } from '@/actions/chat';
 
@@ -24,6 +24,7 @@ type Message = {
   edited_at?: string;
   reply_to?: { id: number; sender_name: string; content: string | null; deleted: boolean };
   reactions?: { emoji: string; count: number; reacted_by_me: boolean; users: string[] }[];
+  attachments?: { url: string; filename: string; content_type: string; byte_size: number }[];
 };
 
 type ChatMessagesProps = {
@@ -383,6 +384,40 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                           msg.content
                         )}
                       </div>
+                      
+                      {!msg.deleted && msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-col gap-2 mt-2">
+                          {msg.attachments.map((attachment, idx) => (
+                            <div key={idx} className="max-w-[240px]">
+                              {attachment.content_type.startsWith('image/') ? (
+                                <a href={attachment.url} target="_blank" rel="noreferrer">
+                                  <img 
+                                    src={attachment.url} 
+                                    alt={attachment.filename} 
+                                    className="rounded-lg object-cover max-h-[200px] w-full"
+                                  />
+                                </a>
+                              ) : (
+                                <a 
+                                  href={attachment.url} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="flex items-center gap-3 bg-black/20 hover:bg-black/30 p-3 rounded-lg transition-colors"
+                                >
+                                  <div className="bg-white/10 p-2 rounded-lg shrink-0">
+                                    <FileDown className="w-5 h-5 text-white/80" />
+                                  </div>
+                                  <div className="flex flex-col overflow-hidden">
+                                    <span className="text-sm font-medium truncate">{attachment.filename}</span>
+                                    <span className="text-[10px] text-white/50">{(attachment.byte_size / 1024 / 1024).toFixed(2)} MB</span>
+                                  </div>
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {msg.edited_at && !msg.deleted && (
                         <span className={`text-[10px] ${isMine ? 'text-brand-200' : 'text-white/40'} self-end italic leading-none`}>
                           {t('edited')}
