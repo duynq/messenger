@@ -111,6 +111,7 @@
     "save": "Save",
     "reply": "Reply",
     "replyingTo": "Replying to",
-    "reactMessage": "Add reaction"
+    "reactMessage": "Add reaction",
+    "insertEmoji": "Insert emoji"
   }
 }
