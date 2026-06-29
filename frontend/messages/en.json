@@ -102,6 +102,8 @@
     "emptyStateDescription": "Create a new group or select someone from the directory below to start a conversation.",
     "createGroupCTA": "Create Group",
     "groupChat": "Group Chat",
-    "continueChat": "Continue Chat"
+    "continueChat": "Continue Chat",
+    "messageDeleted": "Message has been deleted",
+    "deleteMessage": "Delete message"
   }
 }

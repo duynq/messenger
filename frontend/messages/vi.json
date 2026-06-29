@@ -102,6 +102,8 @@
     "emptyStateDescription": "Tạo một nhóm mới hoặc chọn một người từ danh bạ bên dưới để bắt đầu cuộc trò chuyện.",
     "createGroupCTA": "Tạo nhóm",
     "groupChat": "Nhóm Chat",
-    "continueChat": "Tiếp tục Chat"
+    "continueChat": "Tiếp tục Chat",
+    "messageDeleted": "Tin nhắn đã bị xóa",
+    "deleteMessage": "Xóa tin nhắn"
   }
 }

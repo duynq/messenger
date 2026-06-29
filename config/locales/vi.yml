@@ -6,3 +6,5 @@ vi:
     bad_request: "Yêu cầu không hợp lệ"
     too_many_requests: "Quá nhiều yêu cầu. Vui lòng thử lại sau."
     unauthorized: "Không có quyền truy cập"
+    message_not_found: "Không tìm thấy tin nhắn"
+    conversation_not_found: "Không tìm thấy cuộc trò chuyện"

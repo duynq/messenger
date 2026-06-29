@@ -14,9 +14,10 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import { CreateGroupModal } from './CreateGroupModal';
 
 interface LastMessage {
-  content: string;
+  content: string | null;
   sender_name: string;
   created_at: string;
+  deleted?: boolean;
 }
 
 interface Conversation {
@@ -89,6 +90,22 @@ export function ConversationsList({
                 return newConvs;
               }
               router.refresh();
+              return prev;
+            });
+          } else if (data.action === 'message_deleted' && data.conversation_id) {
+            setRealtimeConversations(prev => {
+              const idx = prev.findIndex(c => c.id === data.conversation_id);
+              if (idx !== -1) {
+                const newConvs = [...prev];
+                const conv = newConvs[idx];
+                if (conv.last_message) {
+                  newConvs[idx] = {
+                    ...conv,
+                    last_message: { ...conv.last_message, content: null, deleted: true }
+                  };
+                }
+                return newConvs;
+              }
               return prev;
             });
           }
@@ -257,10 +274,12 @@ export function ConversationsList({
                     </div>
                   </div>
                   {conversation.last_message ? (
-                    <p className="text-white/40 text-xs truncate mt-0.5">
-                      {conversation.is_group
-                        ? `${conversation.last_message.sender_name}: ${conversation.last_message.content}`
-                        : conversation.last_message.content
+                    <p className={`text-xs truncate mt-0.5 ${conversation.last_message.deleted ? 'text-white/30 italic' : 'text-white/40'}`}>
+                      {conversation.last_message.deleted
+                        ? t('messageDeleted')
+                        : conversation.is_group
+                          ? `${conversation.last_message.sender_name}: ${conversation.last_message.content}`
+                          : conversation.last_message.content
                       }
                     </p>
                   ) : conversation.is_group ? (
