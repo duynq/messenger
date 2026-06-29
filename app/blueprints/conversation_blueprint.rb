@@ -9,6 +9,7 @@ class ConversationBlueprint < Blueprinter::Base
       {
         content: msg.deleted? ? nil : msg.content.truncate(50),
         deleted: msg.deleted?,
+        edited_at: msg.edited_at,
         sender_name: msg.user.full_name,
         created_at: msg.created_at
       }
