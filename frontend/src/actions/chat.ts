@@ -49,11 +49,11 @@ export async function startDirectConversationAction(userId: number) {
   return { error: 'Failed to start conversation' };
 }
 
-export async function sendMessageAction(conversationId: number, content: string, replyToId?: number) {
+export async function sendMessageAction(conversationId: number, formData: FormData) {
   try {
     const response = await serverFetch(`/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ message: { content, reply_to_id: replyToId } }),
+      body: formData,
     });
 
     await handleUnauthorized(response);

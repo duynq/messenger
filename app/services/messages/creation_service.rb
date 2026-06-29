@@ -1,14 +1,15 @@
 module Messages
   class CreationService
-    def self.call(conversation:, user:, content:, reply_to_id: nil)
-      new(conversation: conversation, user: user, content: content, reply_to_id: reply_to_id).call
+    def self.call(conversation:, user:, content:, reply_to_id: nil, attachments: [])
+      new(conversation: conversation, user: user, content: content, reply_to_id: reply_to_id, attachments: attachments).call
     end
 
-    def initialize(conversation:, user:, content:, reply_to_id: nil)
+    def initialize(conversation:, user:, content:, reply_to_id: nil, attachments: [])
       @conversation = conversation
       @user = user
       @content = content
       @reply_to_id = reply_to_id
+      @attachments = attachments || []
     end
 
     def call
@@ -29,7 +30,7 @@ module Messages
 
     def validation_error
       return unauthorized_error unless authorized?
-      return invalid_content_error if @content.blank?
+      return invalid_content_error if @content.blank? && @attachments.blank?
 
       invalid_reply_error unless valid_reply?
     end
@@ -62,7 +63,10 @@ module Messages
     end
 
     def create_message_and_update_conversation
-      message = @conversation.messages.create!(user: @user, content: @content, reply_to_id: @reply_to_id)
+      message = @conversation.messages.new(user: @user, content: @content || "", reply_to_id: @reply_to_id)
+      message.attachments = @attachments if @attachments.present?
+      message.save!
+      
       @conversation.update_column(:last_message_at, message.created_at)
       message
     end
@@ -86,7 +90,8 @@ module Messages
     end
 
     def last_message_preview(message)
-      { content: @content.truncate(50), sender_name: @user.full_name, created_at: message.created_at }
+      display_content = @content.presence || "[ #{I18n.t('chat.attachment', default: 'Attachment')} ]"
+      { content: display_content.truncate(50), sender_name: @user.full_name, created_at: message.created_at }
     end
 
     def new_message_payload(message_hash, preview)

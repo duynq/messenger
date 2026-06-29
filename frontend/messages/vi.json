@@ -112,6 +112,9 @@
     "reply": "Trả lời",
     "replyingTo": "Đang trả lời",
     "reactMessage": "Thả biểu cảm",
-    "insertEmoji": "Chèn biểu tượng cảm xúc"
+    "insertEmoji": "Chèn biểu tượng cảm xúc",
+    "attachFile": "Đính kèm tệp",
+    "fileTooLarge": "Tệp quá lớn. Kích thước tối đa là 10MB.",
+    "attachment": "Tệp đính kèm"
   }
 }

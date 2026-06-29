@@ -36,5 +36,20 @@ class MessageBlueprint < Blueprinter::Base
     end
   end
 
+  field :attachments do |message, _|
+    if message.attachments.attached?
+      message.attachments.map do |attachment|
+        {
+          url: Rails.application.routes.url_helpers.rails_blob_url(attachment),
+          filename: attachment.filename.to_s,
+          content_type: attachment.content_type,
+          byte_size: attachment.byte_size
+        }
+      end
+    else
+      []
+    end
+  end
+
   association :user, blueprint: UserBlueprint
 end
