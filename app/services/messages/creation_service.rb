@@ -11,40 +11,64 @@ module Messages
     end
 
     def call
-      return Result.failure({ message: 'Unauthorized', status: :forbidden }) unless @conversation.users.include?(@user)
-      return Result.failure({ message: 'Content cannot be empty', status: :unprocessable_entity }) if @content.blank?
+      return unauthorized_error unless authorized?
+      return invalid_content_error if @content.blank?
 
-      message = @conversation.messages.create!(user: @user, content: @content)
-      @conversation.update_column(:last_message_at, message.created_at)
-
-      message_hash = MessageBlueprint.render_as_hash(message)
-
-      last_message_preview = {
-        content: @content.truncate(50),
-        sender_name: @user.full_name,
-        created_at: message.created_at
-      }
-
-      ActionCable.server.broadcast(
-        "conversation_#{@conversation.id}",
-        { message: message_hash }
-      )
-
-      @conversation.users.each do |u|
-        ActionCable.server.broadcast(
-          "user_#{u.id}_conversations",
-          {
-            action: 'new_message',
-            conversation_id: @conversation.id,
-            message: message_hash,
-            last_message: last_message_preview
-          }
-        )
-      end
-
+      message = create_message_and_update_conversation
+      broadcast_new_message(message)
       Result.success(message)
     rescue => e
-      Result.failure({ message: e.message, status: :unprocessable_entity })
+      Result.failure(error_payload(e.message, :unprocessable_entity))
+    end
+
+    private
+
+    def authorized?
+      @conversation.users.include?(@user)
+    end
+
+    def unauthorized_error
+      Result.failure(error_payload(I18n.t('errors.unauthorized'), :forbidden))
+    end
+
+    def invalid_content_error
+      Result.failure(error_payload('Content cannot be empty', :unprocessable_entity))
+    end
+
+    def error_payload(msg, status)
+      { message: msg, status: status }
+    end
+
+    def create_message_and_update_conversation
+      message = @conversation.messages.create!(user: @user, content: @content)
+      @conversation.update_column(:last_message_at, message.created_at)
+      message
+    end
+
+    def broadcast_new_message(message)
+      message_hash = MessageBlueprint.render_as_hash(message)
+
+      broadcast_to_conversation(message_hash)
+      broadcast_to_users(message, message_hash)
+    end
+
+    def broadcast_to_conversation(message_hash)
+      ActionCable.server.broadcast("conversation_#{@conversation.id}", { message: message_hash })
+    end
+
+    def broadcast_to_users(message, message_hash)
+      preview = last_message_preview(message)
+      @conversation.users.each do |u|
+        ActionCable.server.broadcast("user_#{u.id}_conversations", new_message_payload(message_hash, preview))
+      end
+    end
+
+    def last_message_preview(message)
+      { content: @content.truncate(50), sender_name: @user.full_name, created_at: message.created_at }
+    end
+
+    def new_message_payload(message_hash, preview)
+      { action: 'new_message', conversation_id: @conversation.id, message: message_hash, last_message: preview }
     end
   end
 end

@@ -5,63 +5,64 @@ module Api
       before_action :set_conversation
 
       def index
-        unless @conversation.users.include?(Current.user)
-          return render json: { error: 'Unauthorized' }, status: :forbidden
-        end
+        return render_unauthorized unless @conversation.users.include?(Current.user)
 
-        participant = @conversation.conversation_participants.find_by(user_id: Current.user.id)
-        participant&.update(last_read_at: Time.current)
-
-        scope = @conversation.messages.includes(:user).order(id: :desc)
-
-        if params[:before_message_id].present?
-          scope = scope.where('id < ?', params[:before_message_id])
-        end
-
-        messages = scope.limit(20).to_a
-        has_next = messages.any? && @conversation.messages.where('id < ?', messages.last.id).exists?
-
-        render json: {
-          messages: MessageBlueprint.render_as_hash(messages),
-          meta: {
-            has_next: has_next,
-            next_cursor: messages.last&.id
-          },
-          conversation: ConversationBlueprint.render_as_hash(@conversation, view: :with_participants)
-        }, status: :ok
+        update_last_read
+        messages = fetch_messages.to_a
+        render json: index_payload(messages), status: :ok
       end
 
       def create
         result = Messages::CreationService.call(
-          conversation: @conversation,
-          user: Current.user,
-          content: message_params[:content]
+          conversation: @conversation, user: Current.user, content: message_params[:content]
         )
-
-        if result.success?
-          render json: { message: MessageBlueprint.render_as_hash(result.value) }, status: :created
-        else
-          render json: { error: result.error[:message] }, status: result.error[:status]
-        end
+        render_service_result(result, :created) { |value| { message: MessageBlueprint.render_as_hash(value) } }
       end
 
       def destroy
         message = @conversation.messages.find_by(id: params[:id])
-        return render json: { error: 'Message not found' }, status: :not_found unless message
+        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless message
 
-        result = Messages::DeletionService.call(
-          message: message,
-          user: Current.user
-        )
+        result = Messages::DeletionService.call(message: message, user: Current.user)
+        render_service_result(result, :ok) { { success: true } }
+      end
 
+      private
+
+      def render_unauthorized
+        render json: { error: I18n.t('errors.unauthorized') }, status: :forbidden
+      end
+
+      def render_service_result(result, success_status)
         if result.success?
-          render json: { success: true }, status: :ok
+          render json: yield(result.value), status: success_status
         else
           render json: { error: result.error[:message] }, status: result.error[:status]
         end
       end
 
-      private
+      def update_last_read
+        participant = @conversation.conversation_participants.find_by(user_id: Current.user.id)
+        participant&.update(last_read_at: Time.current)
+      end
+
+      def fetch_messages
+        scope = @conversation.messages.includes(:user).order(id: :desc)
+        scope = scope.where('id < ?', params[:before_message_id]) if params[:before_message_id].present?
+        scope.limit(20)
+      end
+
+      def check_has_next(messages)
+        messages.any? && @conversation.messages.where('id < ?', messages.last.id).exists?
+      end
+
+      def index_payload(messages)
+        {
+          messages: MessageBlueprint.render_as_hash(messages),
+          meta: { has_next: check_has_next(messages), next_cursor: messages.last&.id },
+          conversation: ConversationBlueprint.render_as_hash(@conversation, view: :with_participants)
+        }
+      end
 
       def message_params
         params.require(:message).permit(:content)
@@ -70,7 +71,7 @@ module Api
       def set_conversation
         @conversation = Conversation.find(params[:conversation_id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: 'Conversation not found' }, status: :not_found
+        render json: { error: I18n.t('errors.conversation_not_found') }, status: :not_found
       end
     end
   end
