@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useTransition, useRef, useCallback } from 'react';
-import { Send, Loader2, X, CornerUpLeft } from 'lucide-react';
+import React, { useState, useTransition, useRef, useCallback, useEffect } from 'react';
+import { Send, Loader2, X, CornerUpLeft, Smile } from 'lucide-react';
 import { sendMessageAction } from '@/actions/chat';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 export function MessageForm({ 
   conversationId, 
@@ -21,7 +24,10 @@ export function MessageForm({
   const t = useTranslations('chat');
   const [content, setContent] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const lastTypingEmit = useRef<number>(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   const emitTyping = useCallback(() => {
     const now = Date.now();
@@ -31,6 +37,39 @@ export function MessageForm({
 
     subscriptionRef?.current?.perform('typing');
   }, [subscriptionRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const onEmojiClick = (emojiObject: any) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newContent = content.substring(0, start) + emojiObject.emoji + content.substring(end);
+
+    setContent(newContent);
+    setShowEmojiPicker(false);
+
+    // Focus and set cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emojiObject.emoji.length, start + emojiObject.emoji.length);
+    }, 0);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +111,14 @@ export function MessageForm({
           </button>
         </div>
       )}
-      <div className="flex gap-2 items-center">
-        <div className="flex-1">
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 relative bg-white/5 border border-white/10 rounded-xl flex items-end">
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={handleChange}
             placeholder="Type your message..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none block"
+            className="flex-1 bg-transparent px-4 py-3 min-h-[48px] max-h-[150px] text-white placeholder:text-white/40 focus:outline-none resize-none block"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -87,6 +127,28 @@ export function MessageForm({
               }
             }}
           />
+          <div className="shrink-0 p-2 relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              title={t('insertEmoji')}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+
+            {showEmojiPicker && (
+              <div className="absolute bottom-full right-0 mb-2 z-50 shadow-2xl">
+                <EmojiPicker
+                  onEmojiClick={onEmojiClick}
+                  theme="dark"
+                  searchDisabled={false}
+                  skinTonesDisabled
+                  lazyLoadEmojis
+                />
+              </div>
+            )}
+          </div>
         </div>
       <AnimatedButton 
         type="submit"
