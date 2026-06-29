@@ -63,6 +63,27 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (!token || !conversationId) return;
+
+    const markAsRead = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+        await fetch(`${apiUrl}/conversations/${conversationId}/read`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+      } catch (e) {
+        console.error('Failed to mark as read', e);
+      }
+    };
+
+    markAsRead();
+  }, [messages.length, conversationId, token]);
+
   const loadOlderMessages = async () => {
     if (!nextCursor || isLoadingOlder) return;
     setIsLoadingOlder(true);
@@ -142,8 +163,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     };
   }, [conversationId, token]);
 
-  const otherUser = conversation?.users?.find((u: any) => u.email !== currentUser.email) || conversation?.users?.[0];
-  const presence = otherUser ? getUserPresence(otherUser.id) : null;
+  const otherUser = conversation?.users?.find((u: any) => u.id !== currentUser.id) || conversation?.users?.[0];
+  const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
   const chatTitle = conversation?.is_group && conversation?.name ? conversation.name : (otherUser?.full_name || `Conversation #${conversationId}`);
 
   return (

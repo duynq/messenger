@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { MessageCircle, Loader2 } from 'lucide-react';
+import { createConsumer } from '@rails/actioncable';
 import type { User } from '@/components/providers/AuthProvider';
 import { usePresence } from '@/components/providers/PresenceProvider';
 
@@ -16,6 +17,7 @@ interface Conversation {
   name: string | null;
   users: User[];
   created_at: string;
+  unread_count?: number;
 }
 
 interface Meta {
@@ -29,23 +31,61 @@ export function ConversationsList({
   meta,
   currentUser,
   currentFilter = 'all',
-  availableUsers = []
+  availableUsers = [],
+  token
 }: { 
   conversations: Conversation[];
   meta: Meta | null;
   currentUser: { email: string; full_name: string; id?: number };
   currentFilter?: string;
   availableUsers?: any[];
+  token?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [realtimeConversations, setRealtimeConversations] = useState<Conversation[]>(conversations);
   const { getUserPresence } = usePresence();
 
   useEffect(() => {
+    setRealtimeConversations(conversations);
     setIsNavigating(false);
   }, [conversations, currentFilter]);
+
+  useEffect(() => {
+    if (!token || !currentUser.id) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    const wsUrl = apiUrl.replace('http', 'ws').replace('/api/v1', '') + '/cable?token=' + token;
+    const consumer = createConsumer(wsUrl);
+
+    const subscription = consumer.subscriptions.create(
+      { channel: 'UserConversationsChannel' },
+      {
+        received(data: any) {
+          if (data.action === 'new_message' && data.conversation_id) {
+            setRealtimeConversations(prev => {
+              const idx = prev.findIndex(c => c.id === data.conversation_id);
+              if (idx !== -1) {
+                const newConvs = [...prev];
+                const conv = newConvs.splice(idx, 1)[0];
+                const newUnreadCount = (conv.unread_count || 0) + 1;
+                newConvs.unshift({ ...conv, unread_count: newUnreadCount });
+                return newConvs;
+              }
+              router.refresh();
+              return prev;
+            });
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+      consumer.disconnect();
+    };
+  }, [token, currentUser.id, router]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage === meta?.current_page || newPage < 1 || newPage > (meta?.total_pages || 1)) return;
@@ -137,7 +177,7 @@ export function ConversationsList({
         </div>
       )}
 
-      {conversations.length === 0 ? (
+      {realtimeConversations.length === 0 ? (
         <div className="text-center text-white/50 py-12 border border-white/10 rounded-2xl bg-white/5">
           {currentFilter === 'active'
             ? 'No active conversations found.'
@@ -145,9 +185,9 @@ export function ConversationsList({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {conversations.map(conversation => {
+        {realtimeConversations.map(conversation => {
           // Find the other user in the conversation
-          const otherUser = conversation.users.find(u => u.email !== currentUser.email) || conversation.users[0];
+          const otherUser = conversation.users.find(u => u.id !== currentUser.id) || conversation.users[0];
           const displayName = conversation.is_group && conversation.name 
             ? conversation.name 
             : otherUser?.full_name || 'Unknown User';
@@ -162,15 +202,22 @@ export function ConversationsList({
                   {!conversation.is_group && otherUser && (
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                        getUserPresence(otherUser.id).isOnline ? 'bg-green-500' : 'bg-white/20'
+                        getUserPresence(otherUser.id, (otherUser as any).is_online, (otherUser as any).last_seen_at).isOnline ? 'bg-green-500' : 'bg-white/20'
                       }`}
                     />
                   )}
                 </div>
-                <div className="overflow-hidden">
-                  <h4 className="text-white font-medium truncate" title={displayName}>
-                    {displayName}
-                  </h4>
+                <div className="overflow-hidden flex-1">
+                  <div className="flex justify-between items-center gap-2">
+                    <h4 className="text-white font-medium truncate" title={displayName}>
+                      {displayName}
+                    </h4>
+                    {!!conversation.unread_count && conversation.unread_count > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                      </span>
+                    )}
+                  </div>
                   {conversation.is_group && (
                     <p className="text-white/50 text-xs truncate">Group Chat</p>
                   )}
