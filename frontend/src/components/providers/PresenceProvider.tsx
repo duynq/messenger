@@ -10,7 +10,7 @@ interface UserPresence {
 
 interface PresenceContextType {
   presenceMap: Record<number, UserPresence>;
-  getUserPresence: (userId: number) => UserPresence;
+  getUserPresence: (userId: number, initialIsOnline?: boolean, initialLastSeenAt?: string | null) => UserPresence;
 }
 
 const PresenceContext = createContext<PresenceContextType>({
@@ -54,8 +54,8 @@ export function PresenceProvider({ children, token }: { children: ReactNode; tok
     };
   }, [token]);
 
-  const getUserPresence = (userId: number): UserPresence => {
-    return presenceMap[userId] || { isOnline: false, lastSeenAt: null };
+  const getUserPresence = (userId: number, initialIsOnline?: boolean, initialLastSeenAt?: string | null): UserPresence => {
+    return presenceMap[userId] || { isOnline: initialIsOnline || false, lastSeenAt: initialLastSeenAt || null };
   };
 
   return (

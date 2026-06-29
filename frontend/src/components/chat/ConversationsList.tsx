@@ -187,7 +187,7 @@ export function ConversationsList({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {realtimeConversations.map(conversation => {
           // Find the other user in the conversation
-          const otherUser = conversation.users.find(u => u.email !== currentUser.email) || conversation.users[0];
+          const otherUser = conversation.users.find(u => u.id !== currentUser.id) || conversation.users[0];
           const displayName = conversation.is_group && conversation.name 
             ? conversation.name 
             : otherUser?.full_name || 'Unknown User';
@@ -202,7 +202,7 @@ export function ConversationsList({
                   {!conversation.is_group && otherUser && (
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                        getUserPresence(otherUser.id).isOnline ? 'bg-green-500' : 'bg-white/20'
+                        getUserPresence(otherUser.id, (otherUser as any).is_online, (otherUser as any).last_seen_at).isOnline ? 'bg-green-500' : 'bg-white/20'
                       }`}
                     />
                   )}

@@ -163,8 +163,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     };
   }, [conversationId, token]);
 
-  const otherUser = conversation?.users?.find((u: any) => u.email !== currentUser.email) || conversation?.users?.[0];
-  const presence = otherUser ? getUserPresence(otherUser.id) : null;
+  const otherUser = conversation?.users?.find((u: any) => u.id !== currentUser.id) || conversation?.users?.[0];
+  const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
   const chatTitle = conversation?.is_group && conversation?.name ? conversation.name : (otherUser?.full_name || `Conversation #${conversationId}`);
 
   return (
