@@ -90,5 +90,18 @@
     "label": "Language",
     "en": "English",
     "vi": "Tiếng Việt"
+  },
+  "chat": {
+    "recentConversations": "Recent Conversations",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "newGroup": "+ New Group",
+    "noActiveConversations": "No active conversations found.",
+    "noConversationsYet": "No conversations yet.",
+    "emptyStateTitle": "Start chatting",
+    "emptyStateDescription": "Create a new group or select someone from the directory below to start a conversation.",
+    "createGroupCTA": "Create Group",
+    "groupChat": "Group Chat",
+    "continueChat": "Continue Chat"
   }
 }

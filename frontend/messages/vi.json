@@ -90,5 +90,18 @@
     "label": "Ngôn ngữ",
     "en": "English",
     "vi": "Tiếng Việt"
+  },
+  "chat": {
+    "recentConversations": "Cuộc trò chuyện gần đây",
+    "filterAll": "Tất cả",
+    "filterActive": "Hoạt động",
+    "newGroup": "+ Tạo nhóm mới",
+    "noActiveConversations": "Không tìm thấy cuộc trò chuyện đang hoạt động nào.",
+    "noConversationsYet": "Chưa có cuộc trò chuyện nào.",
+    "emptyStateTitle": "Bắt đầu chat",
+    "emptyStateDescription": "Tạo một nhóm mới hoặc chọn một người từ danh bạ bên dưới để bắt đầu cuộc trò chuyện.",
+    "createGroupCTA": "Tạo nhóm",
+    "groupChat": "Nhóm Chat",
+    "continueChat": "Tiếp tục Chat"
   }
 }
