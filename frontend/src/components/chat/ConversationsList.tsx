@@ -5,11 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { MessageCircle, Loader2 } from 'lucide-react';
+import { formatTimeAgo } from '@/lib/utils';
 import { createConsumer } from '@rails/actioncable';
 import type { User } from '@/components/providers/AuthProvider';
 import { usePresence } from '@/components/providers/PresenceProvider';
 
 import { CreateGroupModal } from './CreateGroupModal';
+
+interface LastMessage {
+  content: string;
+  sender_name: string;
+  created_at: string;
+}
 
 interface Conversation {
   id: number;
@@ -18,6 +25,8 @@ interface Conversation {
   users: User[];
   created_at: string;
   unread_count?: number;
+  last_message_at?: string;
+  last_message?: LastMessage | null;
 }
 
 interface Meta {
@@ -70,7 +79,11 @@ export function ConversationsList({
                 const newConvs = [...prev];
                 const conv = newConvs.splice(idx, 1)[0];
                 const newUnreadCount = (conv.unread_count || 0) + 1;
-                newConvs.unshift({ ...conv, unread_count: newUnreadCount });
+                newConvs.unshift({
+                  ...conv,
+                  unread_count: newUnreadCount,
+                  last_message: data.last_message || conv.last_message
+                });
                 return newConvs;
               }
               router.refresh();
@@ -212,15 +225,29 @@ export function ConversationsList({
                     <h4 className="text-white font-medium truncate" title={displayName}>
                       {displayName}
                     </h4>
-                    {!!conversation.unread_count && conversation.unread_count > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                        {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {conversation.last_message && (
+                        <span className="text-[10px] text-white/30 whitespace-nowrap" suppressHydrationWarning>
+                          {formatTimeAgo(conversation.last_message.created_at)}
+                        </span>
+                      )}
+                      {!!conversation.unread_count && conversation.unread_count > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                          {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {conversation.is_group && (
+                  {conversation.last_message ? (
+                    <p className="text-white/40 text-xs truncate mt-0.5">
+                      {conversation.is_group
+                        ? `${conversation.last_message.sender_name}: ${conversation.last_message.content}`
+                        : conversation.last_message.content
+                      }
+                    </p>
+                  ) : conversation.is_group ? (
                     <p className="text-white/50 text-xs truncate">Group Chat</p>
-                  )}
+                  ) : null}
                 </div>
               </div>
               
