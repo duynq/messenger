@@ -3,6 +3,7 @@ module Api
     class MessagesController < ApplicationController
       before_action :authenticate_user!
       before_action :set_conversation
+      before_action :set_message, only: [:destroy, :update, :react]
 
       def index
         return render_unauthorized unless @conversation.users.include?(Current.user)
@@ -20,18 +21,17 @@ module Api
       end
 
       def update
-        message = @conversation.messages.find_by(id: params[:id])
-        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless message
+        result = Messages::UpdateService.call(message: @message, user: Current.user, content: message_params[:content])
+        render_service_result(result, :ok) { |value| { message: MessageBlueprint.render_as_hash(value) } }
+      end
 
-        result = Messages::UpdateService.call(message: message, user: Current.user, content: message_params[:content])
+      def react
+        result = Messages::ReactionService.call(message: @message, user: Current.user, emoji: params[:emoji])
         render_service_result(result, :ok) { |value| { message: MessageBlueprint.render_as_hash(value) } }
       end
 
       def destroy
-        message = @conversation.messages.find_by(id: params[:id])
-        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless message
-
-        result = Messages::DeletionService.call(message: message, user: Current.user)
+        result = Messages::DeletionService.call(message: @message, user: Current.user)
         render_service_result(result, :ok) { { success: true } }
       end
 
@@ -80,6 +80,11 @@ module Api
         @conversation = Conversation.find(params[:conversation_id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: I18n.t('errors.conversation_not_found') }, status: :not_found
+      end
+
+      def set_message
+        @message = @conversation.messages.find_by(id: params[:id])
+        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless @message
       end
     end
   end

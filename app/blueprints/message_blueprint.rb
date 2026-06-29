@@ -25,5 +25,16 @@ class MessageBlueprint < Blueprinter::Base
     end
   end
 
+  field :reactions do |message, _|
+    message.reactions.includes(:user).group_by(&:emoji).map do |emoji, reactions|
+      {
+        emoji: emoji,
+        count: reactions.size,
+        reacted_by_me: reactions.any? { |r| r.user_id == Current.user&.id },
+        users: reactions.map { |r| r.user.full_name }
+      }
+    end
+  end
+
   association :user, blueprint: UserBlueprint
 end

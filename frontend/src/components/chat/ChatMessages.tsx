@@ -5,9 +5,9 @@ import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft } from 'lucide-react';
+import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft, SmilePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { deleteMessageAction, updateMessageAction } from '@/actions/chat';
+import { deleteMessageAction, updateMessageAction, reactToMessageAction } from '@/actions/chat';
 
 type User = {
   id: number;
@@ -23,6 +23,7 @@ type Message = {
   deleted?: boolean;
   edited_at?: string;
   reply_to?: { id: number; sender_name: string; content: string | null; deleted: boolean };
+  reactions?: { emoji: string; count: number; reacted_by_me: boolean; users: string[] }[];
 };
 
 type ChatMessagesProps = {
@@ -58,6 +59,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const [editingContent, setEditingContent] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<{ id: number, sender_name: string, content: string | null } | null>(null);
+  const [reactingToMessageId, setReactingToMessageId] = useState<number | null>(null);
+  const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -158,13 +161,23 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const handleUpdateMessage = async (messageId: number) => {
     if (!editingContent.trim() || isUpdating) return;
     setIsUpdating(true);
-    const result = await updateMessageAction(conversationId, messageId, editingContent);
-    setIsUpdating(false);
-    if (result.success) {
-      setEditingMessageId(null);
-    } else {
-      // In a real app we might show a toast, here we'll just log
-      console.error(result.error);
+    try {
+      const result = await updateMessageAction(conversationId, messageId, editingContent);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setEditingMessageId(null);
+      }
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleReact = async (messageId: number, emoji: string) => {
+    setReactingToMessageId(null);
+    const result = await reactToMessageAction(conversationId, messageId, emoji);
+    if (result.error) {
+      toast.error(result.error);
     }
   };
 
@@ -352,8 +365,9 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                       </div>
                     </div>
                   ) : (
-                    <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm flex flex-col gap-1 ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'} max-w-full`}>
-                      {msg.reply_to && (
+                    <div className="flex flex-col gap-1 max-w-full">
+                      <div className={`px-4 py-2.5 rounded-2xl text-sm text-white shadow-sm flex flex-col gap-1 ${isMine ? 'bg-brand-600 rounded-tr-sm' : 'bg-white/10 rounded-tl-sm'} max-w-full`}>
+                        {msg.reply_to && (
                         <div 
                           className={`flex flex-col text-xs pl-2.5 border-l-2 cursor-pointer transition-colors truncate rounded-sm mb-1 ${isMine ? 'border-brand-300 hover:bg-brand-500/50 py-1' : 'border-indigo-400 hover:bg-white/5 py-1'}`}
                           onClick={() => document.getElementById(`message-${msg.reply_to?.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -375,10 +389,53 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                         </span>
                       )}
                     </div>
+                      
+                    {msg.reactions && msg.reactions.length > 0 && (
+                      <div className={`flex flex-wrap gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                        {msg.reactions.map(r => (
+                          <button
+                            key={r.emoji}
+                            onClick={() => handleReact(msg.id, r.emoji)}
+                            title={r.users.join(', ')}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
+                              r.reacted_by_me 
+                                ? 'bg-brand-500/20 border-brand-500/50 text-brand-300' 
+                                : 'bg-white/10 border-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span>{r.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   )}
 
                   {!msg.deleted && editingMessageId !== msg.id && (
                     <div className={`absolute top-1/2 -translate-y-1/2 ${isMine ? 'right-full mr-2 flex-row-reverse' : 'left-full ml-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all`}>
+                      <div className="relative">
+                        <button
+                          onClick={() => setReactingToMessageId(reactingToMessageId === msg.id ? null : msg.id)}
+                          className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg shrink-0"
+                          title={t('reactMessage')}
+                        >
+                          <SmilePlus className="w-4 h-4" />
+                        </button>
+                        {reactingToMessageId === msg.id && (
+                          <div className={`absolute top-1/2 -translate-y-1/2 ${isMine ? 'right-full mr-2' : 'left-full ml-2'} flex gap-1 bg-[#1a1a1a] border border-white/10 p-1 rounded-full shadow-xl z-10`}>
+                            {EMOJIS.map(e => (
+                              <button
+                                key={e}
+                                onClick={() => handleReact(msg.id, e)}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors text-lg"
+                              >
+                                {e}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => setReplyToMessage({ id: msg.id, sender_name: msg.user.full_name, content: msg.deleted ? null : msg.content })}
                         className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg shrink-0"
