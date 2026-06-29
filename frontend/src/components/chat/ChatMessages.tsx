@@ -13,6 +13,7 @@ type User = {
   id: number;
   full_name: string;
   email: string;
+  avatar_url?: string;
 };
 
 type Message = {
@@ -270,6 +271,13 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
           >
             <ArrowLeft className="w-4 h-4 text-white/70" />
           </Link>
+          <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 overflow-hidden">
+            {!conversation?.is_group && otherUser?.avatar_url ? (
+              <img src={otherUser.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg font-semibold">{chatTitle[0]?.toUpperCase() || '?'}</span>
+            )}
+          </div>
           <div className="flex flex-col">
             <h3 className="text-lg md:text-xl font-bold text-white truncate">
               {chatTitle}
@@ -331,8 +339,12 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
 
             return (
               <div key={msg.id} id={`message-${msg.id}`} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${isMine ? 'bg-brand-500/20 text-brand-300' : 'bg-indigo-500/20 text-indigo-300'}`}>
-                  <span className="text-sm font-semibold">{initial}</span>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden ${isMine ? 'bg-brand-500/20 text-brand-300' : 'bg-indigo-500/20 text-indigo-300'}`}>
+                  {msg.user.avatar_url ? (
+                    <img src={msg.user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-semibold">{initial}</span>
+                  )}
                 </div>
                 
                 <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group relative min-w-[120px]`}>

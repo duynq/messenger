@@ -7,6 +7,7 @@ RUN apt-get update -qq && \
     nodejs \
     curl \
     git \
+    libvips \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

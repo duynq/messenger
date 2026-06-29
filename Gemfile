@@ -19,6 +19,7 @@ gem "rack-attack", "~> 6.8"
 
 # Active Storage with S3 (MinIO)
 gem "aws-sdk-s3", "~> 1.0", require: false
+gem "image_processing", "~> 1.2"
 
 # Utilities
 gem "activesupport"

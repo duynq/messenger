@@ -64,7 +64,8 @@
     "currentPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "confirmNewPassword": "Xác nhận mật khẩu mới",
-    "updatePassword": "Cập nhật mật khẩu"
+    "updatePassword": "Cập nhật mật khẩu",
+    "changeAvatar": "Đổi Ảnh Đại Diện"
   },
   "errors": {
     "title": "Đã xảy ra lỗi",
