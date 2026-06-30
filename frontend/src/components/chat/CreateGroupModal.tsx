@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { X, Users, Loader2, Search } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { createGroupAction } from '@/actions/chat';
+import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
 
 interface CreateGroupModalProps {
@@ -18,6 +19,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
   const [usersList, setUsersList] = useState(availableUsers);
   const [page, setPage] = useState(1);
@@ -28,10 +30,28 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
 
   // Filter out current user from available users to select
   const selectableUsers = usersList.filter(u => u.email !== currentUser.email);
-  const filteredUsers = selectableUsers.filter(u => 
-    u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+
+  React.useEffect(() => {
+    if (debouncedSearchQuery.length >= 2 || debouncedSearchQuery.length === 0) {
+      setIsLoadingMore(true);
+      const fetchInitial = async () => {
+        try {
+          const { fetchUsersAction } = await import('@/actions/chat');
+          const data = await fetchUsersAction(1, debouncedSearchQuery);
+          if (data.users) {
+            setUsersList(data.users);
+            setPage(1);
+            setHasMore(data.meta?.has_next ?? false);
+          }
+        } catch (error) {
+          console.error("Failed to fetch users", error);
+        } finally {
+          setIsLoadingMore(false);
+        }
+      };
+      fetchInitial();
+    }
+  }, [debouncedSearchQuery]);
 
   const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -41,7 +61,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
       
       try {
         const { fetchUsersAction } = await import('@/actions/chat');
-        const data = await fetchUsersAction(nextPage);
+        const data = await fetchUsersAction(nextPage, debouncedSearchQuery);
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
@@ -110,8 +130,9 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
         <form onSubmit={handleSubmit} className="p-5 flex flex-col flex-1 min-h-0 overflow-y-auto">
           <div className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Group Name</label>
+              <label htmlFor="group-name-input" className="block text-sm font-medium text-white/70 mb-1.5">Group Name</label>
               <input
+                id="group-name-input"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -122,7 +143,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">
+              <label htmlFor="create-group-search" className="block text-sm font-medium text-white/70 mb-1.5">
                 Select Members ({selectedUserIds.length})
               </label>
               <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden flex flex-col">
@@ -130,6 +151,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                     <input 
+                      id="create-group-search"
                       type="text" 
                       placeholder="Search users..." 
                       value={searchQuery}
@@ -142,19 +164,21 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
                   className="max-h-60 overflow-y-auto p-2 space-y-1 hide-scrollbar"
                   onScroll={handleScroll}
                 >
-                  {filteredUsers.length === 0 ? (
+                  {selectableUsers.length === 0 ? (
                     <div className="p-4 text-center text-sm text-white/50">No users found</div>
                   ) : (
                     <>
-                      {filteredUsers.map(user => {
+                      {selectableUsers.map(user => {
                         const isSelected = selectedUserIds.includes(user.id);
                         return (
-                          <div 
+                          <button
+                            type="button"
                             key={user.id}
                             onClick={() => toggleUser(user.id)}
-                            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                            className={`w-full flex items-center gap-3 p-3 text-left rounded-lg transition-all ${
                               isSelected ? 'bg-brand-500/20 border border-brand-500/30' : 'hover:bg-white/5 border border-transparent'
                             }`}
+                            aria-pressed={isSelected}
                           >
                             <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
                               isSelected ? 'bg-brand-500 border-brand-500' : 'border-white/20'
@@ -165,7 +189,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
                               <div className="text-sm font-medium text-white">{user.full_name}</div>
                               <div className="text-xs text-white/50">{user.email}</div>
                             </div>
-                          </div>
+                          </button>
                         );
                       })}
                       {isLoadingMore && (

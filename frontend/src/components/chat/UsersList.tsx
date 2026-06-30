@@ -4,7 +4,8 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { UserPlus, Loader2, MessageCircle } from 'lucide-react';
+import { UserPlus, Loader2, MessageCircle, Search } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { fetchUsersAction, startDirectConversationAction } from '@/actions/chat';
 import type { User } from '@/components/providers/AuthProvider';
 
@@ -25,6 +26,24 @@ export function UsersList({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  useEffect(() => {
+    // Wait for 2 chars or empty
+    if (debouncedSearchQuery.length >= 2 || debouncedSearchQuery.length === 0) {
+      if (debouncedSearchQuery === (searchParams.get('q') || '')) return;
+      setIsNavigating(true);
+      const params = new URLSearchParams(searchParams.toString());
+      if (debouncedSearchQuery) {
+        params.set('q', debouncedSearchQuery);
+      } else {
+        params.delete('q');
+      }
+      params.set('page', '1');
+      router.push(`?${params.toString()}`);
+    }
+  }, [debouncedSearchQuery, searchParams, router]);
 
   // When props change (navigation completes), stop navigating state
   useEffect(() => {
@@ -87,6 +106,17 @@ export function UsersList({
           <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
         </div>
       )}
+
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+        <input
+          type="text"
+          placeholder="Search users by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map(user => (
