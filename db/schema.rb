@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_30_042445) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -49,6 +49,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "last_read_at"
+    t.datetime "muted_at"
     t.index ["conversation_id"], name: "index_conversation_participants_on_conversation_id"
     t.index ["user_id", "conversation_id"], name: "index_conversation_participants_on_user_id_and_conversation_id", unique: true
     t.index ["user_id"], name: "index_conversation_participants_on_user_id"
@@ -102,6 +103,54 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 
+  create_table "notification_deliveries", force: :cascade do |t|
+    t.bigint "notification_id", null: false
+    t.string "channel", limit: 20, null: false
+    t.string "status", limit: 20, default: "pending", null: false
+    t.integer "attempts", default: 0
+    t.integer "max_attempts", default: 3
+    t.text "last_error"
+    t.datetime "delivered_at"
+    t.datetime "next_retry_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["notification_id", "channel"], name: "idx_notification_deliveries_unique", unique: true
+    t.index ["notification_id"], name: "index_notification_deliveries_on_notification_id"
+    t.index ["status"], name: "idx_notification_deliveries_status"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "actor_id"
+    t.string "notifiable_type", limit: 50, null: false
+    t.bigint "notifiable_id", null: false
+    t.string "notification_type", limit: 50, null: false
+    t.jsonb "data", default: {}
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_notifications_on_actor_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "idx_notifications_notifiable"
+    t.index ["notification_type"], name: "idx_notifications_type"
+    t.index ["user_id", "created_at"], name: "idx_notifications_user_created", order: { created_at: :desc }
+    t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "endpoint", null: false
+    t.text "p256dh_key", null: false
+    t.text "auth_key", null: false
+    t.text "user_agent"
+    t.boolean "active", default: true
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["endpoint"], name: "idx_push_subscriptions_endpoint", unique: true
+    t.index ["user_id"], name: "idx_push_subscriptions_user_active", where: "(active = true)"
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -113,6 +162,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "last_seen_at"
+    t.jsonb "notification_preferences", default: {"types"=>{"mention"=>true, "new_message"=>true, "group_renamed"=>true, "added_to_group"=>true, "admin_transferred"=>true, "removed_from_group"=>true}, "channels"=>{"email"=>false, "in_app"=>true, "web_push"=>true}, "quiet_hours"=>nil, "email_digest"=>"none"}
     t.index ["created_at", "id"], name: "index_users_on_created_at_and_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email"], name: "index_users_on_email_trigram", opclass: :gin_trgm_ops, using: :gin
@@ -129,4 +179,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "messages", column: "reply_to_id"
   add_foreign_key "messages", "users"
+  add_foreign_key "notification_deliveries", "notifications", on_delete: :cascade
+  add_foreign_key "notifications", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "notifications", "users", on_delete: :cascade
+  add_foreign_key "push_subscriptions", "users", on_delete: :cascade
 end

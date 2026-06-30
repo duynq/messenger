@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Sidebar, NavPage } from './Sidebar';
+import { NotificationBell } from './NotificationBell';
 import { Menu, MessageSquare } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -39,6 +40,7 @@ export function AppLayout({ children, activePage, title }: AppLayoutProps) {
               </h1>
             )}
           </div>
+          <NotificationBell />
         </header>
 
         {/* Scrollable Content */}

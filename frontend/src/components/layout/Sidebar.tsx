@@ -7,6 +7,7 @@ import { logoutAction } from '@/actions/auth';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { LogOut, Menu, X, MessageSquare, LayoutDashboard, Settings } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 import { useUser } from '@/components/providers/AuthProvider';
 
@@ -35,6 +36,9 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
           <MessageSquare className="w-6 h-6 text-brand-400" />
           {t('common.appName')}
         </h1>
+        <div className="hidden md:block">
+          <NotificationBell />
+        </div>
         {/* Mobile Close Button */}
         <button 
           className="md:hidden p-2 text-white/60 hover:text-white"
