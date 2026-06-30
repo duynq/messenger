@@ -3,13 +3,30 @@
 import React, { useState, useTransition } from 'react';
 import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { addParticipantAction, removeParticipantAction } from '@/actions/chat';
+import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction } from '@/actions/chat';
 import { toast } from 'sonner';
+import { GroupAvatar } from './GroupAvatar';
+
+interface ConversationUser {
+  id: number;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+}
+
+export interface GroupConversation {
+  id: number;
+  is_group: boolean;
+  name: string;
+  admin_id: number;
+  users: ConversationUser[];
+  avatar_url?: string;
+}
 
 interface GroupSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  conversation: any; // Ideally typed
+  conversation: GroupConversation;
   currentUser: { id?: number; email: string };
   availableUsers: { id: number; full_name: string; email: string }[];
 }
@@ -25,10 +42,13 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
   if (!isOpen || !conversation.is_group) return null;
 
   const isAdmin = currentUser.id === conversation.admin_id;
-  const currentMemberIds = conversation.users.map((u: any) => u.id);
+  const currentMemberIds = conversation.users.map((u) => u.id);
   const usersToAdd = usersList.filter(u => !currentMemberIds.includes(u.id));
   
   const filteredUsersToAdd = usersToAdd.filter(u => 
@@ -48,7 +68,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
-            const newUsers = data.users.filter((newUser: any) => !prev.some(u => u.id === newUser.id));
+            const newUsers = data.users.filter((newUser: {id: number, full_name: string, email: string}) => !prev.some(u => u.id === newUser.id));
             return [...prev, ...newUsers];
           });
           setPage(nextPage);
@@ -123,10 +143,50 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
         </div>
 
         <div className="p-5 flex flex-col flex-1 min-h-0 overflow-y-auto">
-          <div className="mb-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-2xl font-bold mx-auto mb-3">
-              {conversation.name?.[0]?.toUpperCase() || 'G'}
+          <div className="mb-6 text-center flex flex-col items-center">
+            <div
+              className={`relative mb-3 ${isAdmin ? 'cursor-pointer group' : ''}`}
+              onClick={() => isAdmin && fileInputRef.current?.click()}
+            >
+              <GroupAvatar conversation={conversation} currentUser={currentUser} className="w-20 h-20 text-2xl" />
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center rounded-full transition-opacity">
+                  {isUploadingAvatar ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Settings2 className="w-5 h-5 text-white" />}
+                </div>
+              )}
             </div>
+
+            {isAdmin && (
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  setIsUploadingAvatar(true);
+                  const formData = new FormData();
+                  formData.append('conversation[avatar]', file);
+
+                  try {
+                    const result = await updateGroupAvatarAction(conversation.id, formData);
+                    if (result.error) {
+                      toast.error(result.error);
+                    } else {
+                      toast.success("Group avatar updated");
+                    }
+                  } catch (err) {
+                    toast.error("Failed to update avatar");
+                  } finally {
+                    setIsUploadingAvatar(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }
+                }}
+              />
+            )}
+
             <h3 className="text-xl font-bold text-white">{conversation.name}</h3>
             <p className="text-sm text-white/50 mt-1">{conversation.users.length} members</p>
           </div>
@@ -210,7 +270,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">Members</label>
             <div className="space-y-2">
-              {conversation.users.map((u: any) => (
+              {conversation.users.map((u) => (
                 <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 overflow-hidden">

@@ -19,6 +19,7 @@ Rails.application.configure do
   end
 
   config.active_storage.service = :minio
+  config.active_storage.resolve_model_to_route = :rails_storage_proxy
   config.active_support.deprecation = :log
   config.active_support.disallowed_deprecation = :raise
   config.active_support.disallowed_deprecation_warnings = []
