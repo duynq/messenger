@@ -10,8 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_29_220113) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_30_032741) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_trgm"
   enable_extension "plpgsql"
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -114,6 +115,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_29_220113) do
     t.datetime "last_seen_at"
     t.index ["created_at", "id"], name: "index_users_on_created_at_and_id"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["email"], name: "index_users_on_email_trigram", opclass: :gin_trgm_ops, using: :gin
+    t.index ["first_name"], name: "index_users_on_first_name", opclass: :gin_trgm_ops, using: :gin
+    t.index ["last_name"], name: "index_users_on_last_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 

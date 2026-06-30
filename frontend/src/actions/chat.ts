@@ -3,9 +3,10 @@
 import { serverFetch, handleUnauthorized } from '@/lib/server-api';
 import { redirect } from 'next/navigation';
 
-export async function fetchUsersAction(page: number) {
+export async function fetchUsersAction(page: number, q?: string) {
   try {
-    const response = await serverFetch(`/users?page=${page}`, {
+    const url = q ? `/users?page=${page}&q=${encodeURIComponent(q)}` : `/users?page=${page}`;
+    const response = await serverFetch(url, {
       method: 'GET',
     });
 

@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction } from '@/actions/chat';
+import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
 import { GroupAvatar } from './GroupAvatar';
 
@@ -36,6 +37,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [selectedUserToAdd, setSelectedUserToAdd] = useState<number | ''>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const [usersList, setUsersList] = useState(availableUsers);
   const [page, setPage] = useState(1);
@@ -50,11 +52,28 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const isAdmin = currentUser.id === conversation.admin_id;
   const currentMemberIds = conversation.users.map((u) => u.id);
   const usersToAdd = usersList.filter(u => !currentMemberIds.includes(u.id));
-  
-  const filteredUsersToAdd = usersToAdd.filter(u => 
-    u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+
+  React.useEffect(() => {
+    if (debouncedSearchQuery.length >= 2 || debouncedSearchQuery.length === 0) {
+      setIsLoadingMore(true);
+      const fetchInitial = async () => {
+        try {
+          const { fetchUsersAction } = await import('@/actions/chat');
+          const data = await fetchUsersAction(1, debouncedSearchQuery);
+          if (data.users) {
+            setUsersList(data.users);
+            setPage(1);
+            setHasMore(data.meta?.has_next ?? false);
+          }
+        } catch (error) {
+          console.error("Failed to fetch users", error);
+        } finally {
+          setIsLoadingMore(false);
+        }
+      };
+      fetchInitial();
+    }
+  }, [debouncedSearchQuery]);
 
   const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -64,7 +83,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
       
       try {
         const { fetchUsersAction } = await import('@/actions/chat');
-        const data = await fetchUsersAction(nextPage);
+        const data = await fetchUsersAction(nextPage, debouncedSearchQuery);
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
@@ -144,9 +163,12 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
 
         <div className="p-5 flex flex-col flex-1 min-h-0 overflow-y-auto">
           <div className="mb-6 text-center flex flex-col items-center">
-            <div
+            <button
+              type="button"
+              disabled={!isAdmin}
               className={`relative mb-3 ${isAdmin ? 'cursor-pointer group' : ''}`}
               onClick={() => isAdmin && fileInputRef.current?.click()}
+              aria-label="Change group avatar"
             >
               <GroupAvatar conversation={conversation} currentUser={currentUser} className="w-20 h-20 text-2xl" />
               {isAdmin && (
@@ -154,7 +176,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                   {isUploadingAvatar ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Settings2 className="w-5 h-5 text-white" />}
                 </div>
               )}
-            </div>
+            </button>
 
             {isAdmin && (
               <input
@@ -193,12 +215,14 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
 
           {isAdmin && usersToAdd.length > 0 && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white/70 mb-2">Add Member</label>
+              <label htmlFor="user-search-input" className="block text-sm font-medium text-white/70 mb-2">Add Member</label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <div 
-                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 h-10 text-sm text-white cursor-pointer flex justify-between items-center"
+                  <button
+                    type="button"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 h-10 text-sm text-white cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    aria-expanded={isDropdownOpen}
                   >
                     <span className="truncate">
                       {selectedUserToAdd 
@@ -206,7 +230,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                         : "Select user..."}
                     </span>
                     <ChevronDown className="w-4 h-4 text-white/50" />
-                  </div>
+                  </button>
                   
                   {isDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-20 max-h-60 flex flex-col overflow-hidden">
@@ -214,12 +238,14 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                         <div className="relative">
                           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                           <input 
+                            id="user-search-input"
                             type="text" 
                             placeholder="Search by name or email..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-brand-500"
                             onClick={(e) => e.stopPropagation()}
+                            aria-label="Search users"
                           />
                         </div>
                       </div>
@@ -227,14 +253,15 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                         className="overflow-y-auto p-1 flex-1 hide-scrollbar"
                         onScroll={handleScroll}
                       >
-                        {filteredUsersToAdd.length === 0 ? (
+                        {usersToAdd.length === 0 ? (
                           <div className="p-3 text-center text-xs text-white/40">No users found</div>
                         ) : (
                           <>
-                            {filteredUsersToAdd.map(u => (
-                              <div 
+                            {usersToAdd.map(u => (
+                              <button
+                                type="button"
                                 key={u.id} 
-                                className={`p-2 rounded-lg cursor-pointer flex flex-col hover:bg-white/5 transition-colors ${selectedUserToAdd === u.id ? 'bg-brand-500/20' : ''}`}
+                                className={`w-full text-left p-2 rounded-lg cursor-pointer flex flex-col hover:bg-white/5 transition-colors ${selectedUserToAdd === u.id ? 'bg-brand-500/20' : ''}`}
                                 onClick={() => {
                                   setSelectedUserToAdd(u.id);
                                   setIsDropdownOpen(false);
@@ -243,7 +270,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                               >
                                 <span className="text-sm font-medium text-white">{u.full_name}</span>
                                 <span className="text-xs text-white/50">{u.email}</span>
-                              </div>
+                              </button>
                             ))}
                             {isLoadingMore && (
                               <div className="py-2 flex justify-center">
