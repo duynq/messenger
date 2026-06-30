@@ -10,6 +10,7 @@ import { formatTimeAgo } from '@/lib/utils';
 import { createConsumer } from '@rails/actioncable';
 import type { User } from '@/components/providers/AuthProvider';
 import { usePresence } from '@/components/providers/PresenceProvider';
+import { GroupAvatar } from './GroupAvatar';
 
 import { CreateGroupModal } from './CreateGroupModal';
 
@@ -29,6 +30,7 @@ interface Conversation {
   unread_count?: number;
   last_message_at?: string;
   last_message?: LastMessage | null;
+  avatar_url?: string;
 }
 
 interface Meta {
@@ -261,12 +263,8 @@ export function ConversationsList({
           return (
             <GlassCard key={conversation.id} hoverEffect className="flex flex-col justify-between p-5">
               <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                  {!conversation.is_group && otherUser?.avatar_url ? (
-                    <img src={otherUser.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-indigo-300 font-semibold text-lg">{initial}</span>
-                  )}
+                <div className="relative">
+                  <GroupAvatar conversation={conversation} currentUser={currentUser} />
                   {!conversation.is_group && otherUser && (
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${

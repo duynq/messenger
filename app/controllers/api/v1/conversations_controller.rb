@@ -29,6 +29,32 @@ module Api
         render json: { success: true }
       end
 
+      def update
+        conversation = Current.user.conversations.find(params[:id])
+
+        if conversation.is_group && conversation.admin_id == Current.user.id
+          if conversation.update(conversation_params)
+            # Broadcast update
+            ActionCable.server.broadcast(
+              "user_conversations",
+              {
+                action: 'group_updated',
+                conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
+              }
+            )
+
+            render json: {
+              success: true,
+              conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
+            }
+          else
+            render json: { error: conversation.errors.full_messages.join(", ") }, status: :unprocessable_entity
+          end
+        else
+          render json: { error: "Unauthorized" }, status: :forbidden
+        end
+      end
+
       def direct
         result = Conversations::DirectCreationService.call(Current.user, params[:user_id])
 
@@ -51,6 +77,12 @@ module Api
         else
           render json: { error: result.error[:message] || result.error }, status: result.error[:status] || :unprocessable_entity
         end
+      end
+
+      private
+
+      def conversation_params
+        params.require(:conversation).permit(:avatar)
       end
     end
   end

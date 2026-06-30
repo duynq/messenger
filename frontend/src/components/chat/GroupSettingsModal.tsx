@@ -3,8 +3,9 @@
 import React, { useState, useTransition } from 'react';
 import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { addParticipantAction, removeParticipantAction } from '@/actions/chat';
+import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction } from '@/actions/chat';
 import { toast } from 'sonner';
+import { GroupAvatar } from './GroupAvatar';
 
 interface GroupSettingsModalProps {
   isOpen: boolean;
@@ -24,6 +25,9 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   if (!isOpen || !conversation.is_group) return null;
 
@@ -123,10 +127,50 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
         </div>
 
         <div className="p-5 flex flex-col flex-1 min-h-0 overflow-y-auto">
-          <div className="mb-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-2xl font-bold mx-auto mb-3">
-              {conversation.name?.[0]?.toUpperCase() || 'G'}
+          <div className="mb-6 text-center flex flex-col items-center">
+            <div
+              className={`relative mb-3 ${isAdmin ? 'cursor-pointer group' : ''}`}
+              onClick={() => isAdmin && fileInputRef.current?.click()}
+            >
+              <GroupAvatar conversation={conversation} currentUser={currentUser} className="w-20 h-20 text-2xl" />
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center rounded-full transition-opacity">
+                  {isUploadingAvatar ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Settings2 className="w-5 h-5 text-white" />}
+                </div>
+              )}
             </div>
+
+            {isAdmin && (
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  setIsUploadingAvatar(true);
+                  const formData = new FormData();
+                  formData.append('conversation[avatar]', file);
+
+                  try {
+                    const result = await updateGroupAvatarAction(conversation.id, formData);
+                    if (result.error) {
+                      toast.error(result.error);
+                    } else {
+                      toast.success("Group avatar updated");
+                    }
+                  } catch (err) {
+                    toast.error("Failed to update avatar");
+                  } finally {
+                    setIsUploadingAvatar(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }
+                }}
+              />
+            )}
+
             <h3 className="text-xl font-bold text-white">{conversation.name}</h3>
             <p className="text-sm text-white/50 mt-1">{conversation.users.length} members</p>
           </div>

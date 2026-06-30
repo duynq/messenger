@@ -3,6 +3,12 @@ class ConversationBlueprint < Blueprinter::Base
 
   fields :is_group, :name, :admin_id, :created_at, :last_message_at
 
+  field :avatar_url do |conversation, _options|
+    if conversation.avatar.attached?
+      Rails.application.routes.url_helpers.rails_representation_url(conversation.avatar.variant(resize_to_limit: [100, 100]).processed)
+    end
+  end
+
   field :last_message do |conversation, _options|
     msg = conversation.messages.includes(:user).order(id: :desc).first
     if msg

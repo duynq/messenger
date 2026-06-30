@@ -3,10 +3,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { createConsumer } from '@rails/actioncable';
+import { useTranslations } from 'next-intl';
+import { GroupAvatar } from './GroupAvatar';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
 import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft, SmilePlus, FileDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction } from '@/actions/chat';
 
 type User = {
@@ -271,13 +272,9 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
           >
             <ArrowLeft className="w-4 h-4 text-white/70" />
           </Link>
-          <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 overflow-hidden">
-            {!conversation?.is_group && otherUser?.avatar_url ? (
-              <img src={otherUser.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-lg font-semibold">{chatTitle[0]?.toUpperCase() || '?'}</span>
-            )}
-          </div>
+          {conversation && (
+            <GroupAvatar conversation={conversation as any} currentUser={currentUser} />
+          )}
           <div className="flex flex-col">
             <h3 className="text-lg md:text-xl font-bold text-white truncate">
               {chatTitle}

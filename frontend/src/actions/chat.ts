@@ -207,3 +207,27 @@ export async function reactToMessageAction(conversationId: number, messageId: nu
     return { error: 'Unexpected error occurred' };
   }
 }
+
+export async function updateGroupAvatarAction(conversationId: number, formData: FormData) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}`, {
+      method: 'PATCH',
+      body: formData,
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to update group avatar' };
+    }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+    revalidatePath('/[locale]/dashboard', 'page');
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}

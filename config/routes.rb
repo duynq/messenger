@@ -20,7 +20,7 @@ Rails.application.routes.draw do
       resources :users, only: [:index]
 
       # Conversations
-      resources :conversations, only: [:index] do
+      resources :conversations, only: [:index, :update] do
         member do
           patch :read
         end
