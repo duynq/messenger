@@ -29,15 +29,22 @@ type Message = {
   attachments?: { url: string; filename: string; content_type: string; byte_size: number }[];
 };
 
-type ChatMessagesProps = {
-  initialMessages: Message[];
+interface ChatMessagesProps {
   conversationId: number;
-  currentUser: User;
+  currentUser: { id: number; full_name: string; email: string; avatar_url?: string };
+  initialMessages?: Message[];
+  conversation?: {
+    id: number;
+    is_group: boolean;
+    name: string;
+    admin_id: number;
+    avatar_url?: string;
+    users: { id: number; full_name: string; email: string; is_online?: boolean; last_seen_at?: string; avatar_url?: string }[];
+  };
+  availableUsers?: { id: number; full_name: string; email: string }[];
   token: string | undefined;
-  conversation?: any;
-  availableUsers?: any[];
   initialMeta?: { has_next: boolean; next_cursor: number | null };
-};
+}
 
 import { formatTimeAgo } from '@/lib/utils';
 import { usePresence } from '@/components/providers/PresenceProvider';
@@ -258,7 +265,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     };
   }, [conversationId, token]);
 
-  const otherUser = conversation?.users?.find((u: any) => u.id !== currentUser.id) || conversation?.users?.[0];
+  const otherUser = conversation?.users?.find((u) => u.id !== currentUser.id) || conversation?.users?.[0];
   const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
   const chatTitle = conversation?.is_group && conversation?.name ? conversation.name : (otherUser?.full_name || `Conversation #${conversationId}`);
 
@@ -273,7 +280,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             <ArrowLeft className="w-4 h-4 text-white/70" />
           </Link>
           {conversation && (
-            <GroupAvatar conversation={conversation as any} currentUser={currentUser} />
+            <GroupAvatar conversation={conversation} currentUser={currentUser} />
           )}
           <div className="flex flex-col">
             <h3 className="text-lg md:text-xl font-bold text-white truncate">

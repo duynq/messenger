@@ -268,7 +268,7 @@ export function ConversationsList({
                   {!conversation.is_group && otherUser && (
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                        getUserPresence(otherUser.id, (otherUser as any).is_online, (otherUser as any).last_seen_at).isOnline ? 'bg-green-500' : 'bg-white/20'
+                        getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at).isOnline ? 'bg-green-500' : 'bg-white/20'
                       }`}
                     />
                   )}

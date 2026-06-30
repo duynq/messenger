@@ -7,10 +7,26 @@ import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction 
 import { toast } from 'sonner';
 import { GroupAvatar } from './GroupAvatar';
 
+interface ConversationUser {
+  id: number;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+}
+
+export interface GroupConversation {
+  id: number;
+  is_group: boolean;
+  name: string;
+  admin_id: number;
+  users: ConversationUser[];
+  avatar_url?: string;
+}
+
 interface GroupSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  conversation: any; // Ideally typed
+  conversation: GroupConversation;
   currentUser: { id?: number; email: string };
   availableUsers: { id: number; full_name: string; email: string }[];
 }
@@ -32,7 +48,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   if (!isOpen || !conversation.is_group) return null;
 
   const isAdmin = currentUser.id === conversation.admin_id;
-  const currentMemberIds = conversation.users.map((u: any) => u.id);
+  const currentMemberIds = conversation.users.map((u) => u.id);
   const usersToAdd = usersList.filter(u => !currentMemberIds.includes(u.id));
   
   const filteredUsersToAdd = usersToAdd.filter(u => 
@@ -52,7 +68,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
-            const newUsers = data.users.filter((newUser: any) => !prev.some(u => u.id === newUser.id));
+            const newUsers = data.users.filter((newUser: {id: number, full_name: string, email: string}) => !prev.some(u => u.id === newUser.id));
             return [...prev, ...newUsers];
           });
           setPage(nextPage);
@@ -254,7 +270,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">Members</label>
             <div className="space-y-2">
-              {conversation.users.map((u: any) => (
+              {conversation.users.map((u) => (
                 <div key={u.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 overflow-hidden">

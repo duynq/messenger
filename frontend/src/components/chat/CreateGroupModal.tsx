@@ -45,7 +45,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
-            const newUsers = data.users.filter((newUser: any) => !prev.some(u => u.id === newUser.id));
+            const newUsers = data.users.filter((newUser: {id: number, full_name: string, email: string}) => !prev.some(u => u.id === newUser.id));
             return [...prev, ...newUsers];
           });
           setPage(nextPage);
