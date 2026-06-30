@@ -35,6 +35,12 @@ class ConversationBlueprint < Blueprinter::Base
     end
   end
 
+  field :read_receipts do |conversation, _options|
+    conversation.conversation_participants.each_with_object({}) do |cp, hash|
+      hash[cp.user_id] = cp.last_read_at
+    end
+  end
+
   view :with_participants do
     association :users, blueprint: UserBlueprint
   end
