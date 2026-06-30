@@ -37,7 +37,7 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
           {t('common.appName')}
         </h1>
         <div className="hidden md:block">
-          <NotificationBell />
+          <NotificationBell align="left" />
         </div>
         {/* Mobile Close Button */}
         <button 

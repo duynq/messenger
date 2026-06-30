@@ -37,7 +37,7 @@ function getNotificationText(notification: Notification): string {
   }
 }
 
-export function NotificationBell() {
+export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right' }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -93,9 +93,9 @@ export function NotificationBell() {
       {/* Dropdown */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-80 bg-[#111111]/95 backdrop-blur-lg 
+          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-80 bg-[#111111]/95 backdrop-blur-lg
                      border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50
-                     animate-in fade-in slide-in-from-top-2 duration-200"
+                     animate-in fade-in slide-in-from-top-2 duration-200`}
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center">
@@ -165,22 +165,6 @@ export function NotificationBell() {
               })
             )}
           </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="px-4 py-2 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                }}
-                className="w-full text-center text-xs text-brand-400 
-                           hover:text-brand-300 py-1 transition-colors"
-              >
-                View all notifications
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
