@@ -55,7 +55,16 @@ module Api
 
       def update_last_read
         participant = @conversation.conversation_participants.find_by(user_id: Current.user.id)
-        participant&.update(last_read_at: Time.current)
+        if participant&.update(last_read_at: Time.current)
+          ActionCable.server.broadcast(
+            "conversation_#{@conversation.id}",
+            {
+              action: 'read_receipt',
+              user_id: Current.user.id,
+              last_read_at: participant.last_read_at
+            }
+          )
+        end
       end
 
       def fetch_messages

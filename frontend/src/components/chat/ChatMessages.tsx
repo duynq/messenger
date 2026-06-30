@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { GroupAvatar } from './GroupAvatar';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2, Pencil, X, Check, CornerUpLeft, SmilePlus, FileDown } from 'lucide-react';
+import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown } from 'lucide-react';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction } from '@/actions/chat';
 
 type User = {
@@ -39,6 +39,7 @@ interface ChatMessagesProps {
     name: string;
     admin_id: number;
     avatar_url?: string;
+    read_receipts?: Record<number, string>;
     users: { id: number; full_name: string; email: string; is_online?: boolean; last_seen_at?: string; avatar_url?: string }[];
   };
   availableUsers?: { id: number; full_name: string; email: string }[];
@@ -59,7 +60,8 @@ function formatTypingText(typingUsers: Record<number, string>): string {
 }
 
 export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers, initialMeta }: ChatMessagesProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(initialMessages || []);
+  const [readReceipts, setReadReceipts] = useState<Record<number, string>>(conversation?.read_receipts || {});
   const [hasNext, setHasNext] = useState(initialMeta?.has_next || false);
   const [nextCursor, setNextCursor] = useState<number | null>(initialMeta?.next_cursor || null);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -231,6 +233,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             setMessages(prev => prev.map(msg =>
               msg.id === data.message.id ? data.message : msg
             ));
+          } else if (data.action === 'read_receipt') {
+            setReadReceipts(prev => ({ ...prev, [data.user_id]: data.last_read_at }));
           } else if (data.message) {
             // Remove sender from typing users when they send a message
             if (data.message.user?.id) {
@@ -340,6 +344,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             const isMine = msg.user.id === currentUser.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const initial = msg.user.full_name[0]?.toUpperCase() || '?';
+            
+            // For read receipts
+            const lastMyMessage = [...messages].reverse().find(m => m.user.id === currentUser.id);
+            const isLastMine = lastMyMessage?.id === msg.id;
 
             return (
               <div key={msg.id} id={`message-${msg.id}`} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>
@@ -512,6 +520,23 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
+                    </div>
+                  )}
+
+                  {/* Read receipts */}
+                  {isLastMine && !conversation?.is_group && (
+                    <div className="flex justify-end mt-1 items-center" title={
+                      otherUser && readReceipts[otherUser.id] && new Date(msg.created_at) <= new Date(readReceipts[otherUser.id]) 
+                        ? 'Đã xem' : 'Đã gửi'
+                    }>
+                      {(() => {
+                        const isRead = otherUser && readReceipts[otherUser.id] && new Date(msg.created_at) <= new Date(readReceipts[otherUser.id]);
+                        return isRead ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-brand-400" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-white/40" />
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
