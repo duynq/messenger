@@ -23,6 +23,8 @@ Rails.application.routes.draw do
       resources :conversations, only: [:index, :update] do
         member do
           patch :read
+          post :mute
+          delete :mute, action: :unmute
         end
         resources :messages, only: [:index, :create, :destroy, :update] do
           post :react, on: :member
@@ -33,6 +35,20 @@ Rails.application.routes.draw do
           post :group
         end
       end
+
+      # Notifications
+      resources :notifications, only: [:index, :destroy] do
+        member do
+          patch :read
+        end
+        collection do
+          get :unread_count
+          post :read_all
+        end
+      end
+
+      # Notification Preferences
+      resource :notification_preferences, only: [:show, :update]
 
       # Account management
       resource :account, only: [:update, :destroy]

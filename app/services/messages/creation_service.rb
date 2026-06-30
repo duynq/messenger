@@ -25,6 +25,7 @@ module Messages
     def process_creation
       message = create_message_and_update_conversation
       broadcast_new_message(message)
+      notify_participants(message)
       Result.success(message)
     end
 
@@ -96,6 +97,29 @@ module Messages
 
     def new_message_payload(message_hash, preview)
       { action: 'new_message', conversation_id: @conversation.id, message: message_hash, last_message: preview }
+    end
+
+    def notify_participants(message)
+      recipients = @conversation.users.where.not(id: @user.id)
+
+      Notifications::CreationService.call(
+        recipients: recipients,
+        payload: {
+          actor: @user,
+          notifiable: message,
+          type: 'new_message',
+          data: notification_data(message)
+        }
+      )
+    end
+
+    def notification_data(message)
+      {
+        conversation_id: @conversation.id,
+        conversation_name: @conversation.name || @user.full_name,
+        message_preview: (@content.presence || 'Attachment').truncate(100),
+        is_group: @conversation.is_group
+      }
     end
   end
 end
