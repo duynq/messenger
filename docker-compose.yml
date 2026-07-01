@@ -83,6 +83,28 @@ services:
     stdin_open: true
     tty: true
 
+  sidekiq:
+    build: .
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://messenger:messenger_password@db:5432/messenger_development
+      REDIS_URL: redis://redis:6379/1
+      RAILS_ENV: development
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: messenger-files
+      SECRET_KEY_BASE: development_secret_key_base_thats_long_enough_for_rails_7
+    command: bundle exec sidekiq
+
   frontend:
     build:
       context: ./frontend
