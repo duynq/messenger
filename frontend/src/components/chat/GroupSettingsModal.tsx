@@ -50,6 +50,8 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newGroupName, setNewGroupName] = useState(conversation?.name || '');
+  const [isTransferringBeforeLeave, setIsTransferringBeforeLeave] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState<number | ''>('');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -136,6 +138,12 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
 
   const handleLeaveGroup = () => {
     if (!currentUser.id) return;
+
+    if (isAdmin && conversation.users.length > 1) {
+      setIsTransferringBeforeLeave(true);
+      return;
+    }
+
     if (!confirm("Are you sure you want to leave this group?")) return;
 
     startTransition(async () => {
@@ -144,7 +152,26 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
         toast.error(result.error);
       } else {
         toast.success("You have left the group");
-        // Navigation will be handled by revalidatePath in Server Action, but client might need explicit redirect
+        window.location.href = '/dashboard';
+      }
+    });
+  };
+
+  const handleTransferAndLeave = () => {
+    if (!transferTargetId || !currentUser.id) return;
+
+    startTransition(async () => {
+      const transferResult = await transferGroupAdminAction(conversation.id, Number(transferTargetId));
+      if (transferResult.error) {
+        toast.error(transferResult.error);
+        return;
+      }
+
+      const leaveResult = await removeParticipantAction(conversation.id, currentUser.id!);
+      if (leaveResult.error) {
+        toast.error(leaveResult.error);
+      } else {
+        toast.success("Transferred admin and left the group");
         window.location.href = '/dashboard';
       }
     });
@@ -458,21 +485,62 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
           </div>
         </div>
 
-        <div className="mt-auto flex justify-between p-4 border-t border-white/5 bg-background/50">
-          <AnimatedButton 
-            variant="ghost"
-            onClick={handleLeaveGroup}
-            disabled={isPending || isAdmin} // Admin shouldn't leave without re-assigning, or we just block it for now
-            className={`text-red-400 hover:text-red-300 hover:bg-red-400/10 border-0 ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={isAdmin ? "Admins cannot leave currently" : "Leave Group"}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Leave Group
-          </AnimatedButton>
-          
-          <AnimatedButton variant="secondary" onClick={onClose} disabled={isPending}>
-            Close
-          </AnimatedButton>
+        <div className="mt-auto flex flex-col p-4 border-t border-white/5 bg-background/50">
+          {isTransferringBeforeLeave ? (
+            <div className="flex flex-col gap-3 mb-3 p-3 bg-white/5 rounded-xl border border-white/10">
+              <p className="text-sm text-white/80">Select a new admin before leaving:</p>
+              <select
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                value={transferTargetId}
+                onChange={(e) => setTransferTargetId(Number(e.target.value) || '')}
+              >
+                <option value="" className="bg-[#111] text-white">Select member...</option>
+                {conversation.users.filter(u => u.id !== currentUser.id).map(u => (
+                  <option key={u.id} value={u.id} className="bg-[#111] text-white">
+                    {u.full_name} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <div className="flex justify-end gap-2 mt-1">
+                <AnimatedButton
+                  variant="ghost"
+                  onClick={() => {
+                    setIsTransferringBeforeLeave(false);
+                    setTransferTargetId('');
+                  }}
+                  disabled={isPending}
+                  className="px-3 py-1.5 h-8 text-sm text-white/60 hover:text-white"
+                >
+                  Cancel
+                </AnimatedButton>
+                <AnimatedButton
+                  variant="secondary"
+                  onClick={handleTransferAndLeave}
+                  disabled={isPending || !transferTargetId}
+                  className="px-3 py-1.5 h-8 text-sm bg-brand-500 text-white hover:bg-brand-600 border-0"
+                >
+                  Transfer & Leave
+                </AnimatedButton>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between w-full">
+              <AnimatedButton
+                variant="ghost"
+                onClick={handleLeaveGroup}
+                disabled={isPending}
+                className="text-red-400 hover:text-red-300 hover:bg-red-400/10 border-0"
+                title="Leave Group"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Leave Group
+              </AnimatedButton>
+
+              <AnimatedButton variant="secondary" onClick={onClose} disabled={isPending}>
+                Close
+              </AnimatedButton>
+            </div>
+          )}
         </div>
       </div>
     </div>

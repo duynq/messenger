@@ -33,7 +33,16 @@ module Conversations
       end
 
       return Result.failure(status: :bad_request, message: 'Not a group conversation') unless conversation.is_group?
-      return Result.failure(status: :bad_request, message: 'Cannot remove the admin') if target_user_id == conversation.admin_id
+
+      if target_user_id == conversation.admin_id
+        if conversation.conversation_participants.count > 1
+          return Result.failure(status: :bad_request, message: 'Please transfer admin rights before leaving')
+        else
+          # If admin is the only participant, destroy the conversation
+          conversation.destroy!
+          return Result.success(true)
+        end
+      end
 
       participant = conversation.conversation_participants.find_by(user_id: target_user_id)
       return Result.failure(status: :not_found, message: 'Participant not found') unless participant
