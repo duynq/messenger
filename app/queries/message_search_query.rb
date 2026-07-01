@@ -15,9 +15,12 @@ class MessageSearchQuery
   end
 
   def search(query)
+    tsquery = format_tsquery(query)
+    return base_scope.none if tsquery.blank?
+
     base_scope
-      .where("searchable @@ plainto_tsquery('simple', :q)", q: query)
-      .select("messages.*", snippet_select(query))
+      .where("searchable @@ to_tsquery('simple', :q)", q: tsquery)
+      .select("messages.*", snippet_select(tsquery))
       .order(created_at: :desc)
   end
 
@@ -29,10 +32,16 @@ class MessageSearchQuery
       .where(conversations: { id: @conversations.select(:id) })
   end
 
-  def snippet_select(query)
-    quoted = Message.connection.quote(query)
+  def snippet_select(tsquery)
+    quoted = Message.connection.quote(tsquery)
 
-    "ts_headline('simple', content, plainto_tsquery('simple', #{quoted}), " \
+    "ts_headline('simple', content, to_tsquery('simple', #{quoted}), " \
       "'#{HEADLINE_OPTIONS}') as snippet"
+  end
+
+  def format_tsquery(query)
+    # Extract alphanumeric words (supporting unicode letters like Vietnamese)
+    terms = query.to_s.scan(/[\p{L}\p{N}_]+/)
+    terms.map { |term| "#{term}:*" }.join(" & ")
   end
 end

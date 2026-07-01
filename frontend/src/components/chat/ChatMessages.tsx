@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { GroupAvatar } from './GroupAvatar';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell } from 'lucide-react';
+import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell, Search } from 'lucide-react';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction } from '@/actions/chat';
 import { toast } from 'sonner';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -346,7 +346,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                   {presence.isOnline
                     ? 'Online'
                     : ((presence.lastSeenAt || otherUser?.last_seen_at)
-                        ? `Last seen ${formatTimeAgo(presence.lastSeenAt || otherUser.last_seen_at)}`
+                        ? `Last seen ${formatTimeAgo((presence.lastSeenAt || otherUser?.last_seen_at) as string)}`
                         : 'Offline')}
                 </span>
               </div>

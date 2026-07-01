@@ -123,6 +123,10 @@
     "insertEmoji": "Insert emoji",
     "attachFile": "Attach file",
     "fileTooLarge": "File is too large. Max size is 10MB.",
-    "attachment": "Attachment"
+    "attachment": "Attachment",
+    "searchPlaceholderLocal": "Search in this conversation...",
+    "searchPlaceholderGlobal": "Search messages globally...",
+    "searchEmptyTitle": "Type to search messages",
+    "searchNoResults": "No messages found for \"{query}\""
   }
 }

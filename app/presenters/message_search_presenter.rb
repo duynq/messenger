@@ -15,7 +15,7 @@ class MessageSearchPresenter
         id: @message.user.id,
         full_name: @message.user.full_name,
         email: @message.user.email,
-        avatar_url: @message.user.avatar.attached? ? @view_context.url_for(@message.user.avatar) : nil
+        avatar_url: @message.user.avatar.attached? ? Rails.application.routes.url_helpers.rails_representation_url(@message.user.avatar.variant(resize_to_limit: [100, 100]).processed) : nil
       }
     }
   end

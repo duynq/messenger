@@ -7,6 +7,7 @@ import { searchMessagesAction } from '@/actions/chat';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
+import { useTranslations } from 'next-intl';
 
 interface SearchResult {
   id: number;
@@ -38,18 +39,31 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
   
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const t = useTranslations('common');
+  const tChat = useTranslations('chat');
 
-  // Focus input when modal opens
+  // Focus input when modal opens and handle Escape key
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
+      document.addEventListener('keydown', handleKeyDown);
     } else {
       setSearchQuery('');
       setResults([]);
       setPage(1);
       setHasMore(false);
     }
-  }, [isOpen]);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -127,7 +141,7 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={conversationId ? "Search in this conversation..." : "Search messages globally..."}
+            placeholder={conversationId ? tChat('searchPlaceholderLocal') : tChat('searchPlaceholderGlobal')}
             className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-white/40 h-12 text-base px-2"
           />
           {searchQuery && (
@@ -142,7 +156,8 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
             onClick={onClose}
             className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors mr-2 text-sm font-medium"
           >
-            Esc
+            <span className="hidden sm:inline">Esc</span>
+            <span className="sm:hidden">{t('cancel')}</span>
           </button>
         </div>
 
@@ -154,7 +169,7 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
           {searchQuery.trim() === '' ? (
             <div className="flex flex-col items-center justify-center h-48 text-white/30">
               <MessageSquare className="w-12 h-12 mb-3 opacity-20" />
-              <p>Type to search messages</p>
+              <p>{tChat('searchEmptyTitle')}</p>
             </div>
           ) : isLoading && page === 1 ? (
             <div className="flex justify-center items-center h-48">
@@ -162,7 +177,7 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
             </div>
           ) : results.length === 0 ? (
             <div className="flex justify-center items-center h-48 text-white/50 text-sm">
-              No messages found for "{searchQuery}"
+              {tChat('searchNoResults', { query: searchQuery })}
             </div>
           ) : (
             <div className="flex flex-col">
