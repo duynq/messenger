@@ -16,12 +16,7 @@ module Api
         end
 
         # Join conversations and apply full-text search
-        messages_scope = Message
-          .joins(:conversation)
-          .where(conversations: { id: conversations.select(:id) })
-          .where("searchable @@ plainto_tsquery('simple', :q)", q: query)
-          .select("messages.*, ts_headline('simple', content, plainto_tsquery('simple', '#{ActiveRecord::Base.connection.quote_string(query)}'), 'StartSel=<b>, StopSel=</b>, MaxWords=35, MinWords=15, ShortWord=3, HighlightAll=FALSE, MaxFragments=2, FragmentDelimiter=\" ... \"') as snippet")
-          .order(created_at: :desc)
+        messages_scope = MessageSearchQuery.new(conversations).search(query)
 
         # Count might be slow, but for pagination it's required. We can use a simpler approach or Pagy's standard.
         @pagy, records = pagy(messages_scope)
@@ -30,7 +25,7 @@ module Api
         ActiveRecord::Associations::Preloader.new(records: records, associations: { user: { avatar_attachment: :blob } }).call
 
         render json: {
-          messages: records.map { |msg| format_message(msg) },
+          messages: MessageSearchPresenter.format_messages(records, self),
           meta: {
             current_page: @pagy.page,
             next_page: @pagy.next,
@@ -41,24 +36,6 @@ module Api
         }
       rescue Pagy::OverflowError
         render json: { messages: [], meta: { has_next: false } }
-      end
-
-      private
-
-      def format_message(msg)
-        {
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          content: msg.content,
-          snippet: msg.attributes['snippet'],
-          created_at: msg.created_at,
-          user: {
-            id: msg.user.id,
-            full_name: msg.user.full_name,
-            email: msg.user.email,
-            avatar_url: msg.user.avatar.attached? ? url_for(msg.user.avatar) : nil
-          }
-        }
       end
     end
   end

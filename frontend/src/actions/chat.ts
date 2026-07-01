@@ -1,5 +1,6 @@
 'use server';
 
+import { z } from 'zod';
 import { serverFetch, handleUnauthorized } from '@/lib/server-api';
 import { redirect } from 'next/navigation';
 
@@ -23,11 +24,29 @@ export async function fetchUsersAction(page: number, q?: string) {
   }
 }
 
+const SearchMessagesSchema = z.object({
+  query: z.string().min(1),
+  page: z.number().int().positive().default(1),
+  conversationId: z.number().int().positive().optional(),
+});
+
 export async function searchMessagesAction(query: string, page: number, conversationId?: number) {
   try {
-    let url = `/search/messages?q=${encodeURIComponent(query)}&page=${page}`;
-    if (conversationId) {
-      url += `&conversation_id=${conversationId}`;
+    const validatedFields = SearchMessagesSchema.safeParse({
+      query,
+      page,
+      conversationId,
+    });
+
+    if (!validatedFields.success) {
+      return { error: 'Invalid search parameters' };
+    }
+
+    const { query: vQuery, page: vPage, conversationId: vConversationId } = validatedFields.data;
+
+    let url = `/search/messages?q=${encodeURIComponent(vQuery)}&page=${vPage}`;
+    if (vConversationId) {
+      url += `&conversation_id=${vConversationId}`;
     }
     const response = await serverFetch(url, {
       method: 'GET',

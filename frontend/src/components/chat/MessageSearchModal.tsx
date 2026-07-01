@@ -6,6 +6,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { searchMessagesAction } from '@/actions/chat';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface SearchResult {
   id: number;
@@ -201,7 +202,7 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
                   {result.snippet ? (
                     <p 
                       className="text-sm text-white/70 pl-8 pr-4 line-clamp-2"
-                      dangerouslySetInnerHTML={{ __html: result.snippet }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(result.snippet) }}
                     />
                   ) : (
                     <p className="text-sm text-white/70 pl-8 pr-4 line-clamp-2">
