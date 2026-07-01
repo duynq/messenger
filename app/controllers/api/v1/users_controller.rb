@@ -20,7 +20,7 @@ module Api
         end
         
         # Use extracted concern for high-performance Pagy + Deferred Join
-        @pagy, users = paginate_with_deferred(users_scope, count: count)
+        @pagy, users = paginate_with_deferred(users_scope, count: count, includes: { avatar_attachment: { blob: :variant_records } })
 
         render json: {
           users: UserBlueprint.render_as_hash(users, view: :with_email_and_storage),

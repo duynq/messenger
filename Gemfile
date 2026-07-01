@@ -45,3 +45,5 @@ group :test do
 end
 
 gem "pagy", "~> 9.3"
+gem "sidekiq", "~> 8.1"
+gem "kredis", "~> 1.8"

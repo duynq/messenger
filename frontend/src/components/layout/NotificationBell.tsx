@@ -165,6 +165,21 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
               })
             )}
           </div>
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="px-4 py-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                }}
+                className="w-full text-center text-xs text-brand-400 
+                           hover:text-brand-300 py-1 transition-colors"
+              >
+                View all notifications
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

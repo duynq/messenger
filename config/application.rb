@@ -13,6 +13,7 @@ module Messenger
     config.middleware.use Rack::Attack
     config.autoload_lib(ignore: %w[assets tasks])
     config.active_storage.variant_processor = :vips
+    config.active_job.queue_adapter = :sidekiq
     # Devise requires sessions
     config.session_store :cookie_store, key: '_messenger_session', secure: Rails.env.production?, httponly: true, same_site: :lax
     config.middleware.use ActionDispatch::Cookies

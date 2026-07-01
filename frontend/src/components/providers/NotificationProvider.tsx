@@ -77,20 +77,43 @@ export function NotificationProvider({ token, children }: NotificationProviderPr
             setUnreadCount(data.unread_count as number);
             break;
 
-          case 'notification':
-            setNotifications(prev => [data.notification as Notification, ...prev]);
-            setUnreadCount(prev => prev + 1);
+          case 'notification': {
+            const notif = data.notification as Notification;
+            const notifData = notif.data as Record<string, string>;
+
+            // Check if user is currently active in the conversation that triggered the notification
+            const isViewingConversation = notifData.conversation_id &&
+              window.location.pathname.includes(`/chat/${notifData.conversation_id}`);
+
+            if (isViewingConversation) {
+              // Silently mark as read since user is already looking at it
+              notif.read_at = new Date().toISOString();
+              setNotifications(prev => [notif, ...prev]);
+
+              // Trigger backend to mark it as read asynchronously
+              markNotificationReadAction(notif.id).catch(console.error);
+            } else {
+              setNotifications(prev => [notif, ...prev]);
+              setUnreadCount(prev => prev + 1);
+            }
             break;
+          }
 
           case 'notification_read':
-            setNotifications(prev =>
-              prev.map(n =>
+            setNotifications(prev => {
+              const notifIndex = prev.findIndex(n => n.id === (data.notification_id as number));
+
+              // Only decrement if the notification exists and is currently unread
+              if (notifIndex >= 0 && !prev[notifIndex].read_at) {
+                setUnreadCount(current => Math.max(0, current - 1));
+              }
+
+              return prev.map(n =>
                 n.id === (data.notification_id as number)
                   ? { ...n, read_at: new Date().toISOString() }
                   : n
-              )
-            );
-            setUnreadCount(prev => Math.max(0, prev - 1));
+              );
+            });
             break;
 
           case 'notifications_read_all':

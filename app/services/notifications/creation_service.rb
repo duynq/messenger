@@ -35,7 +35,7 @@ module Notifications
     end
 
     def should_skip?(recipient)
-      recipient.id == @payload[:actor]&.id || type_disabled?(recipient) || conversation_muted?(recipient)
+      recipient.id == @payload[:actor]&.id || type_disabled?(recipient) || conversation_muted?(recipient) || user_in_quiet_hours?(recipient)
     end
 
     def type_disabled?(recipient)
@@ -56,6 +56,18 @@ module Notifications
       @conversation_id ||= n.is_a?(Conversation) ? n.id : n.try(:conversation_id)
     end
 
+    def user_in_quiet_hours?(recipient)
+      prefs = get_preferences(recipient)
+      quiet = prefs['quiet_hours']
+      return false unless quiet&.dig('enabled')
+
+      QuietHoursChecker.quiet?(
+        start_time: quiet['start'],
+        end_time: quiet['end'],
+        timezone: quiet['timezone']
+      )
+    end
+
     def get_preferences(user)
       Rails.cache.fetch("user_prefs:#{user.id}", expires_in: 5.minutes) do
         user.notification_preferences || {}
@@ -71,7 +83,7 @@ module Notifications
 
       channels.each do |channel|
         delivery = create_delivery(notification, channel)
-        NotificationDeliveryJob.perform_now(delivery.id)
+        NotificationDeliveryJob.perform_async(delivery.id)
       end
     end
 

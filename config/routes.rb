@@ -1,3 +1,5 @@
+require 'sidekiq/web'
+
 Rails.application.routes.draw do
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
@@ -14,6 +16,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Dashboard
+
       get "dashboard", to: "dashboard#index"
 
       # Users List
@@ -56,6 +59,11 @@ Rails.application.routes.draw do
   end
 
   mount ActionCable.server => '/cable'
+
+  # Sidekiq Web UI (protected)
+  authenticate :user do
+    mount Sidekiq::Web => '/sidekiq'
+  end
 
   root to: proc { [404, {}, ["Not found"]] }
 end
