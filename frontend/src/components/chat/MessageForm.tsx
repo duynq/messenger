@@ -204,7 +204,7 @@ export function MessageForm({
               <div className="absolute bottom-full right-[-60px] sm:right-0 mb-2 z-50 shadow-2xl w-[calc(100vw-32px)] sm:w-[350px] max-w-[350px]">
                 <EmojiPicker
                   onEmojiClick={onEmojiClick}
-                  theme="dark"
+                  theme={"dark" as any}
                   searchDisabled={false}
                   skinTonesDisabled
                   lazyLoadEmojis

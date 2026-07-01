@@ -123,6 +123,10 @@
     "insertEmoji": "Chèn biểu tượng cảm xúc",
     "attachFile": "Đính kèm tệp",
     "fileTooLarge": "Tệp quá lớn. Kích thước tối đa là 10MB.",
-    "attachment": "Tệp đính kèm"
+    "attachment": "Tệp đính kèm",
+    "searchPlaceholderLocal": "Tìm kiếm trong cuộc trò chuyện này...",
+    "searchPlaceholderGlobal": "Tìm kiếm trên tất cả tin nhắn...",
+    "searchEmptyTitle": "Nhập để tìm kiếm tin nhắn",
+    "searchNoResults": "Không tìm thấy tin nhắn nào cho \"{query}\""
   }
 }

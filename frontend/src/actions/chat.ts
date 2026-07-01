@@ -1,5 +1,6 @@
 'use server';
 
+import { z } from 'zod';
 import { serverFetch, handleUnauthorized } from '@/lib/server-api';
 import { redirect } from 'next/navigation';
 
@@ -15,6 +16,47 @@ export async function fetchUsersAction(page: number, q?: string) {
 
     if (!response.ok) {
       return { error: 'Failed to fetch users' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
+const SearchMessagesSchema = z.object({
+  query: z.string().min(1),
+  page: z.number().int().positive().default(1),
+  conversationId: z.number().int().positive().optional(),
+});
+
+export async function searchMessagesAction(query: string, page: number, conversationId?: number) {
+  try {
+    const validatedFields = SearchMessagesSchema.safeParse({
+      query,
+      page,
+      conversationId,
+    });
+
+    if (!validatedFields.success) {
+      return { error: 'Invalid search parameters' };
+    }
+
+    const { query: vQuery, page: vPage, conversationId: vConversationId } = validatedFields.data;
+
+    let url = `/search/messages?q=${encodeURIComponent(vQuery)}&page=${vPage}`;
+    if (vConversationId) {
+      url += `&conversation_id=${vConversationId}`;
+    }
+    const response = await serverFetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      return { error: 'Failed to search messages' };
     }
 
     return await response.json();

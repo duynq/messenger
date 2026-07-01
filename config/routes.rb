@@ -22,6 +22,11 @@ Rails.application.routes.draw do
       # Users List
       resources :users, only: [:index]
 
+      # Search
+      namespace :search do
+        resources :messages, only: [:index], controller: '/api/v1/message_search'
+      end
+
       # Conversations
       resources :conversations, only: [:index, :update] do
         member do

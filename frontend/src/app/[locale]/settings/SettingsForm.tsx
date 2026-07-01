@@ -60,7 +60,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
             accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
           />
-          <AnimatedButton type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+          <AnimatedButton type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
             {t('settings.changeAvatar') || "Change Avatar"}
           </AnimatedButton>
           <p className="text-white/40 text-xs mt-2">JPG, PNG, WebP or GIF. Max 5MB.</p>
