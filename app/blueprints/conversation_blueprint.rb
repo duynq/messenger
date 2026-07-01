@@ -13,7 +13,7 @@ class ConversationBlueprint < Blueprinter::Base
     msg = conversation.messages.includes(:user).order(id: :desc).first
     if msg
       {
-        content: msg.deleted? ? nil : msg.content.truncate(50),
+        content: msg.deleted? ? nil : (msg.system? ? '[System]' : msg.content.to_s.truncate(50)),
         deleted: msg.deleted?,
         edited_at: msg.edited_at,
         sender_name: msg.user.full_name,

@@ -49,14 +49,12 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [hasMore, setHasMore] = useState(true);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [newGroupName, setNewGroupName] = useState(conversation.name);
+  const [newGroupName, setNewGroupName] = useState(conversation?.name || '');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  if (!isOpen || !conversation.is_group) return null;
-
-  const isAdmin = currentUser.id === conversation.admin_id;
-  const currentMemberIds = conversation.users.map((u) => u.id);
+  const isAdmin = currentUser.id === conversation?.admin_id;
+  const currentMemberIds = conversation?.users?.map((u) => u.id) || [];
   const usersToAdd = usersList.filter(u => !currentMemberIds.includes(u.id));
 
   React.useEffect(() => {
@@ -182,6 +180,8 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
       }
     });
   };
+
+  if (!isOpen || !conversation?.is_group) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

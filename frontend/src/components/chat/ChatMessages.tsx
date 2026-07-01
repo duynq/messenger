@@ -366,16 +366,18 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
         </div>
       </div>
 
-      <GroupSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        conversation={conversation}
-        currentUser={currentUser}
-        availableUsers={availableUsers || []}
-        isMuted={isMuted}
-        onMuteToggle={handleToggleMute}
-        isMuteLoading={isMuteLoading}
-      />
+      {conversation?.is_group && (
+        <GroupSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          conversation={conversation as any}
+          currentUser={currentUser}
+          availableUsers={availableUsers || []}
+          isMuted={isMuted}
+          onMuteToggle={handleToggleMute}
+          isMuteLoading={isMuteLoading}
+        />
+      )}
 
       <div 
         className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col"

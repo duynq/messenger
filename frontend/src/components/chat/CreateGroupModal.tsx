@@ -26,8 +26,6 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  if (!isOpen) return null;
-
   // Filter out current user from available users to select
   const selectableUsers = usersList.filter(u => u.email !== currentUser.email);
 
@@ -111,6 +109,8 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
       }
     });
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
