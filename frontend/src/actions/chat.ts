@@ -23,6 +23,29 @@ export async function fetchUsersAction(page: number, q?: string) {
   }
 }
 
+export async function searchMessagesAction(query: string, page: number, conversationId?: number) {
+  try {
+    let url = `/search/messages?q=${encodeURIComponent(query)}&page=${page}`;
+    if (conversationId) {
+      url += `&conversation_id=${conversationId}`;
+    }
+    const response = await serverFetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      return { error: 'Failed to search messages' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
 export async function startDirectConversationAction(userId: number) {
   let conversationId = null;
 

@@ -6,8 +6,9 @@ import { Link } from '@/i18n/navigation';
 import { logoutAction } from '@/actions/auth';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
-import { LogOut, Menu, X, MessageSquare, LayoutDashboard, Settings } from 'lucide-react';
+import { LogOut, Menu, X, MessageSquare, LayoutDashboard, Settings, Search } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
+import { MessageSearchModal } from '@/components/chat/MessageSearchModal';
 
 import { useUser } from '@/components/providers/AuthProvider';
 
@@ -22,6 +23,7 @@ interface SidebarProps {
 export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
   const t = useTranslations();
   const user = useUser();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navLinks = [
     { href: '/dashboard', label: t('nav.dashboard'), page: 'dashboard', icon: <LayoutDashboard size={20} /> },
@@ -66,6 +68,17 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
             <LanguageSwitcher />
           </div>
         )}
+      </div>
+
+      {/* Search Button */}
+      <div className="px-4 pb-2">
+        <button
+          onClick={() => { setIsOpen(false); setIsSearchOpen(true); }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <Search size={18} />
+          <span className="text-sm font-medium">Search Messages</span>
+        </button>
       </div>
 
       {/* Nav Links */}
@@ -132,6 +145,12 @@ export function Sidebar({ activePage, isOpen, setIsOpen }: SidebarProps) {
           {sidebarContent}
         </aside>
       </div>
+
+      {/* Global Search Modal */}
+      <MessageSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </>
   );
 }

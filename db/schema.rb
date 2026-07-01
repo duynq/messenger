@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_01_031323) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_01_045317) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -98,10 +98,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_01_031323) do
     t.bigint "reply_to_id"
     t.string "message_type", default: "user", null: false
     t.jsonb "metadata", default: {}
+    t.virtual "searchable", type: :tsvector, as: "to_tsvector('simple'::regconfig, COALESCE(content, ''::text))", stored: true
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["deleted_at"], name: "index_messages_on_deleted_at"
     t.index ["reply_to_id"], name: "index_messages_on_reply_to_id"
+    t.index ["searchable"], name: "index_messages_on_searchable", using: :gin
     t.index ["user_id"], name: "index_messages_on_user_id"
   end
 

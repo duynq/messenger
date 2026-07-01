@@ -10,7 +10,8 @@ import { GroupSettingsModal } from './GroupSettingsModal';
 import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell } from 'lucide-react';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction } from '@/actions/chat';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { MessageSearchModal } from './MessageSearchModal';
 
 type User = {
   id: number;
@@ -79,6 +80,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const [reactingToMessageId, setReactingToMessageId] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(conversation?.is_muted || false);
   const [isMuteLoading, setIsMuteLoading] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
   const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -104,6 +107,24 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     }
     if (isAtBottom.current) {
       scrollToBottom();
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    // Handle hash scrolling and highlighting
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#message-')) {
+      const msgId = parseInt(hash.replace('#message-', ''), 10);
+      if (!isNaN(msgId)) {
+        setTimeout(() => {
+          const el = document.getElementById(`message-${msgId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedMessageId(msgId);
+            setTimeout(() => setHighlightedMessageId(null), 3000); // clear highlight after 3s
+          }
+        }, 500);
+      }
     }
   }, [messages]);
 
@@ -278,7 +299,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
       subscription.unsubscribe();
       consumer.disconnect();
     };
-  }, [conversationId, token]);
+  }, [conversationId, token, currentUser.id]);
 
   const otherUser = conversation?.users?.find((u) => u.id !== currentUser.id) || conversation?.users?.[0];
   const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
@@ -367,6 +388,13 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
               <Settings2 size={20} />
             </button>
           )}
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
+            title="Search in conversation"
+          >
+            <Search size={20} />
+          </button>
         </div>
       </div>
 
@@ -432,8 +460,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
               );
             }
 
+            const isHighlighted = highlightedMessageId === msg.id;
+
             return (
-              <div key={msg.id} id={`message-${msg.id}`} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>
+              <div key={msg.id} id={`message-${msg.id}`} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''} ${isHighlighted ? 'ring-2 ring-brand-500 bg-brand-500/10 p-2 rounded-xl transition-all duration-1000' : 'transition-all duration-1000'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden ${isMine ? 'bg-brand-500/20 text-brand-300' : 'bg-indigo-500/20 text-indigo-300'}`}>
                   {msg.user.avatar_url ? (
                     <img src={msg.user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -587,7 +617,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                       </button>
                       {isMine && Date.now() - new Date(msg.created_at).getTime() < 15 * 60 * 1000 && (
                         <button
-                          onClick={() => { setEditingMessageId(msg.id); setEditingContent(msg.content); }}
+                          onClick={() => { setEditingMessageId(msg.id); setEditingContent(msg.content || ''); }}
                           className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg shrink-0"
                           title={t('editMessage')}
                         >
@@ -651,6 +681,14 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
           onCancelReply={() => setReplyToMessage(null)}
         />
       </div>
+
+      {isSearchOpen && (
+        <MessageSearchModal 
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          conversationId={conversationId}
+        />
+      )}
     </>
   );
 }
