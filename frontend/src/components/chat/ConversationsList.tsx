@@ -126,6 +126,22 @@ export function ConversationsList({
               }
               return prev;
             });
+          } else if (data.action === 'group_updated' && data.conversation) {
+            setRealtimeConversations(prev => {
+              const idx = prev.findIndex(c => c.id === data.conversation.id);
+              if (idx !== -1) {
+                const newConvs = [...prev];
+                // merge updated fields from data.conversation, but keep last_message and unread_count if they exist
+                newConvs[idx] = {
+                  ...newConvs[idx],
+                  ...data.conversation,
+                  last_message: newConvs[idx].last_message,
+                  unread_count: newConvs[idx].unread_count
+                };
+                return newConvs;
+              }
+              return prev;
+            });
           }
         }
       }

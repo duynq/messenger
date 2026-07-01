@@ -10,6 +10,7 @@ import { GroupSettingsModal } from './GroupSettingsModal';
 import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell } from 'lucide-react';
 import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction } from '@/actions/chat';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 type User = {
   id: number;
@@ -89,6 +90,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const { getUserPresence } = usePresence();
   const t = useTranslations('chat');
   const tSys = useTranslations('systemMessages');
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -240,6 +242,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             setMessages(prev => prev.map(msg =>
               msg.id === data.message.id ? data.message : msg
             ));
+          } else if (data.action === 'group_updated') {
+            router.refresh();
           } else if (data.action === 'read_receipt') {
             setReadReceipts(prev => ({ ...prev, [data.user_id]: data.last_read_at }));
           } else if (data.message) {

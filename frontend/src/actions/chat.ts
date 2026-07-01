@@ -8,6 +8,7 @@ export async function fetchUsersAction(page: number, q?: string) {
     const url = q ? `/users?page=${page}&q=${encodeURIComponent(q)}` : `/users?page=${page}`;
     const response = await serverFetch(url, {
       method: 'GET',
+      cache: 'no-store',
     });
 
     await handleUnauthorized(response);
