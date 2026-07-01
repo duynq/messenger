@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_30_042445) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_01_031323) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -90,12 +90,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_30_042445) do
   create_table "messages", force: :cascade do |t|
     t.bigint "conversation_id", null: false
     t.bigint "user_id", null: false
-    t.text "content", null: false
+    t.text "content"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
     t.datetime "edited_at"
     t.bigint "reply_to_id"
+    t.string "message_type", default: "user", null: false
+    t.jsonb "metadata", default: {}
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["deleted_at"], name: "index_messages_on_deleted_at"

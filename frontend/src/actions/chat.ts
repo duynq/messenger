@@ -233,6 +233,60 @@ export async function updateGroupAvatarAction(conversationId: number, formData: 
   }
 }
 
+export async function updateGroupNameAction(conversationId: number, name: string) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ conversation: { name } }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to update group name' };
+    }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+    revalidatePath('/[locale]/dashboard', 'page');
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
+export async function transferGroupAdminAction(conversationId: number, adminId: number) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ conversation: { admin_id: adminId } }),
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to transfer group admin' };
+    }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+    revalidatePath('/[locale]/dashboard', 'page');
+
+    return { success: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
 export async function muteConversationAction(conversationId: number) {
   try {
     const response = await serverFetch(`/conversations/${conversationId}/mute`, {

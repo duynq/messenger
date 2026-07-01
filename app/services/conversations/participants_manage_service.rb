@@ -12,6 +12,7 @@ module Conversations
       end
 
       conversation.conversation_participants.create!(user: user)
+      Messages::SystemMessageService.create_join(conversation, current_user, user)
       
       Result.success(user)
     rescue => e
@@ -37,7 +38,10 @@ module Conversations
       participant = conversation.conversation_participants.find_by(user_id: target_user_id)
       return Result.failure(status: :not_found, message: 'Participant not found') unless participant
 
+      target_user = participant.user
       participant.destroy!
+
+      Messages::SystemMessageService.create_leave(conversation, current_user, target_user, !is_leaving)
 
       Result.success(true)
     rescue => e

@@ -43,7 +43,20 @@ module Api
         conversation = Current.user.conversations.find(params[:id])
 
         if conversation.is_group && conversation.admin_id == Current.user.id
+          old_name = conversation.name
+          old_admin_id = conversation.admin_id
+
           if conversation.update(conversation_params)
+            # Trigger system messages if needed
+            if conversation.saved_change_to_name?
+              Messages::SystemMessageService.create_rename(conversation, Current.user, old_name, conversation.name)
+            end
+
+            if conversation.saved_change_to_admin_id?
+              new_admin = User.find(conversation.admin_id)
+              Messages::SystemMessageService.create_admin_transfer(conversation, Current.user, new_admin)
+            end
+
             # Broadcast update
             ActionCable.server.broadcast(
               "user_conversations",
@@ -106,7 +119,7 @@ module Api
       private
 
       def conversation_params
-        params.require(:conversation).permit(:avatar)
+        params.require(:conversation).permit(:avatar, :name, :admin_id)
       end
     end
   end
