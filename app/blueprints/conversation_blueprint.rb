@@ -41,6 +41,11 @@ class ConversationBlueprint < Blueprinter::Base
     end
   end
 
+  field :is_muted do |conversation, _options|
+    participant = conversation.conversation_participants.find { |cp| cp.user_id == Current.user&.id }
+    participant&.muted? || false
+  end
+
   view :with_participants do
     association :users, blueprint: UserBlueprint
   end

@@ -232,3 +232,47 @@ export async function updateGroupAvatarAction(conversationId: number, formData: 
     return { error: 'Unexpected error occurred' };
   }
 }
+
+export async function muteConversationAction(conversationId: number) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/mute`, {
+      method: 'POST',
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to mute conversation' };
+    }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+
+    return { success: true, muted: true };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
+export async function unmuteConversationAction(conversationId: number) {
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/mute`, {
+      method: 'DELETE',
+    });
+
+    await handleUnauthorized(response);
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { error: data.error || 'Failed to unmute conversation' };
+    }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/[locale]/chat/${conversationId}`, 'page');
+
+    return { success: true, muted: false };
+  } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
