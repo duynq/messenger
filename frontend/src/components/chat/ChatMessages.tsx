@@ -20,7 +20,7 @@ type User = {
 
 type Message = {
   id: number;
-  content: string;
+  content: string | null;
   created_at: string;
   user: User;
   deleted?: boolean;
@@ -28,6 +28,8 @@ type Message = {
   reply_to?: { id: number; sender_name: string; content: string | null; deleted: boolean };
   reactions?: { emoji: string; count: number; reacted_by_me: boolean; users: string[] }[];
   attachments?: { url: string; filename: string; content_type: string; byte_size: number }[];
+  message_type?: 'user' | 'system';
+  metadata?: Record<string, any>;
 };
 
 interface ChatMessagesProps {
@@ -86,6 +88,7 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const subscriptionRef = useRef<any>(null);
   const { getUserPresence } = usePresence();
   const t = useTranslations('chat');
+  const tSys = useTranslations('systemMessages');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -398,6 +401,30 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
             // For read receipts
             const lastMyMessage = [...messages].reverse().find(m => m.user.id === currentUser.id);
             const isLastMine = lastMyMessage?.id === msg.id;
+
+            if (msg.message_type === 'system') {
+              const action = msg.metadata?.action as 'join' | 'leave' | 'remove' | 'rename' | 'admin_transfer';
+              const actor = msg.user.full_name;
+              let content = '';
+
+              try {
+                if (action === 'rename') {
+                  content = tSys('rename', { actor, new_name: msg.metadata?.new_name || '' });
+                } else if (action === 'join' || action === 'leave' || action === 'remove' || action === 'admin_transfer') {
+                  content = tSys(action, { actor, target: msg.metadata?.target_user?.full_name || '' });
+                }
+              } catch (e) {
+                content = `${actor} ${action}`;
+              }
+
+              return (
+                <div key={msg.id} id={`message-${msg.id}`} className="flex justify-center w-full my-2 shrink-0">
+                  <div className="bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-[11px] text-white/50">
+                    {content}
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div key={msg.id} id={`message-${msg.id}`} className={`flex gap-3 max-w-[80%] shrink-0 ${isMine ? 'ml-auto flex-row-reverse' : ''}`}>

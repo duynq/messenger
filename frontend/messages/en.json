@@ -8,6 +8,13 @@
     "backToDashboard": "Back to Dashboard",
     "close": "Close"
   },
+  "systemMessages": {
+    "join": "{actor} added {target} to the group.",
+    "leave": "{target} left the group.",
+    "remove": "{actor} removed {target} from the group.",
+    "rename": "{actor} changed the group name to {new_name}.",
+    "admin_transfer": "{actor} made {target} an admin."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "settings": "Settings",

@@ -8,6 +8,13 @@
     "backToDashboard": "Về trang chủ",
     "close": "Đóng"
   },
+  "systemMessages": {
+    "join": "{actor} đã thêm {target} vào nhóm.",
+    "leave": "{target} đã rời nhóm.",
+    "remove": "{actor} đã xóa {target} khỏi nhóm.",
+    "rename": "{actor} đã đổi tên nhóm thành {new_name}.",
+    "admin_transfer": "{actor} đã chỉ định {target} làm quản trị viên."
+  },
   "nav": {
     "dashboard": "Bảng điều khiển",
     "settings": "Cài đặt",

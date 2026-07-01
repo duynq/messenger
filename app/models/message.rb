@@ -8,6 +8,9 @@ class Message < ApplicationRecord
   has_many :reactions, class_name: 'MessageReaction', dependent: :destroy
   has_many_attached :attachments
 
+  enum message_type: { user: 'user', system: 'system' }
+
+  validates :content, presence: true, if: -> { user? && !attachments.attached? }
   validate :acceptable_attachments
   
   private

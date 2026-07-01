@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown, BellOff, Bell } from 'lucide-react';
+import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown, BellOff, Bell, Pencil, Check, Crown } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction } from '@/actions/chat';
+import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction, updateGroupNameAction, transferGroupAdminAction } from '@/actions/chat';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
 import { GroupAvatar } from './GroupAvatar';
@@ -47,9 +47,11 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newGroupName, setNewGroupName] = useState(conversation.name);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   if (!isOpen || !conversation.is_group) return null;
 
@@ -150,6 +152,37 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
     });
   };
 
+  const handleUpdateName = () => {
+    if (!newGroupName.trim() || newGroupName === conversation.name) {
+      setIsEditingName(false);
+      setNewGroupName(conversation.name);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updateGroupNameAction(conversation.id, newGroupName.trim());
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Group name updated");
+        setIsEditingName(false);
+      }
+    });
+  };
+
+  const handleTransferAdmin = (userId: number) => {
+    if (!confirm("Are you sure you want to make this user the new admin? You will lose admin privileges.")) return;
+
+    startTransition(async () => {
+      const result = await transferGroupAdminAction(conversation.id, userId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Admin role transferred successfully");
+      }
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -213,7 +246,55 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
               />
             )}
 
-            <h3 className="text-xl font-bold text-white">{conversation.name}</h3>
+            <div className="flex items-center justify-center gap-2 max-w-full">
+              {isEditingName ? (
+                <div className="flex items-center gap-2 w-full px-4">
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 min-w-0"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleUpdateName();
+                      if (e.key === 'Escape') {
+                        setIsEditingName(false);
+                        setNewGroupName(conversation.name);
+                      }
+                    }}
+                  />
+                  <button 
+                    onClick={handleUpdateName}
+                    disabled={isPending}
+                    className="p-1.5 text-brand-400 hover:bg-brand-500/20 rounded-lg transition-colors shrink-0"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsEditingName(false);
+                      setNewGroupName(conversation.name);
+                    }}
+                    disabled={isPending}
+                    className="p-1.5 text-white/50 hover:bg-white/10 hover:text-white rounded-lg transition-colors shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-white truncate px-2">{conversation.name}</h3>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => setIsEditingName(true)}
+                      className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <p className="text-sm text-white/50 mt-1">{conversation.users.length} members</p>
           </div>
 
@@ -352,14 +433,24 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                     </div>
                   </div>
                   {isAdmin && u.id !== currentUser.id && (
-                    <button 
-                      onClick={() => handleRemoveMember(u.id)}
-                      disabled={isPending}
-                      className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
-                      title="Remove member"
-                    >
-                      <UserMinus className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleTransferAdmin(u.id)}
+                        disabled={isPending}
+                        className="p-1.5 text-yellow-400/70 hover:text-yellow-400 hover:bg-yellow-400/10 rounded-lg transition-colors"
+                        title="Make Admin"
+                      >
+                        <Crown className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleRemoveMember(u.id)}
+                        disabled={isPending}
+                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
+                        title="Remove member"
+                      >
+                        <UserMinus className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
