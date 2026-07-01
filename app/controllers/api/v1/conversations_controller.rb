@@ -24,7 +24,7 @@ module Api
       def read
         conversation = Current.user.conversations.find(params[:id])
         participant = conversation.conversation_participants.find_by(user_id: Current.user.id)
-        
+
         if participant&.update(last_read_at: Time.current)
           ActionCable.server.broadcast(
             "conversation_#{conversation.id}",
@@ -44,17 +44,11 @@ module Api
 
         if conversation.is_group && conversation.admin_id == Current.user.id
           old_name = conversation.name
-          old_admin_id = conversation.admin_id
 
           if conversation.update(conversation_params)
             # Trigger system messages if needed
             if conversation.saved_change_to_name?
               Messages::SystemMessageService.create_rename(conversation, Current.user, old_name, conversation.name)
-            end
-
-            if conversation.saved_change_to_admin_id?
-              new_admin = User.find(conversation.admin_id)
-              Messages::SystemMessageService.create_admin_transfer(conversation, Current.user, new_admin)
             end
 
             # Broadcast update
@@ -78,7 +72,42 @@ module Api
             render json: { error: conversation.errors.full_messages.join(", ") }, status: :unprocessable_entity
           end
         else
-          render json: { error: "Unauthorized" }, status: :forbidden
+          render json: { error: "Not authorized" }, status: :forbidden
+        end
+      end
+
+      def transfer_admin
+        conversation = Current.user.conversations.find(params[:id])
+
+        unless conversation.is_group && conversation.admin_id == Current.user.id
+          return render json: { error: "Not authorized" }, status: :forbidden
+        end
+
+        new_admin = conversation.users.find_by(id: params[:user_id])
+        unless new_admin
+          return render json: { error: "User is not a participant of this group" }, status: :unprocessable_entity
+        end
+
+        if new_admin.id == Current.user.id
+          return render json: { error: "You are already the admin" }, status: :unprocessable_entity
+        end
+
+        if conversation.update(admin_id: new_admin.id)
+          Messages::SystemMessageService.create_admin_transfer(conversation, Current.user, new_admin)
+
+          payload = {
+            action: 'group_updated',
+            conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
+          }
+
+          conversation.users.each do |u|
+            ActionCable.server.broadcast("user_#{u.id}_conversations", payload)
+          end
+          ActionCable.server.broadcast("conversation_#{conversation.id}", payload)
+
+          render json: { success: true }
+        else
+          render json: { error: conversation.errors.full_messages.join(", ") }, status: :unprocessable_entity
         end
       end
 
@@ -123,7 +152,7 @@ module Api
       private
 
       def conversation_params
-        params.require(:conversation).permit(:avatar, :name, :admin_id)
+        params.require(:conversation).permit(:avatar, :name)
       end
     end
   end

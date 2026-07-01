@@ -28,6 +28,7 @@ Rails.application.routes.draw do
           patch :read
           post :mute
           delete :mute, action: :unmute
+          patch :transfer_admin
         end
         resources :messages, only: [:index, :create, :destroy, :update] do
           post :react, on: :member

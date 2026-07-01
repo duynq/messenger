@@ -263,12 +263,12 @@ export async function updateGroupNameAction(conversationId: number, name: string
 
 export async function transferGroupAdminAction(conversationId: number, adminId: number) {
   try {
-    const response = await serverFetch(`/conversations/${conversationId}`, {
+    const response = await serverFetch(`/conversations/${conversationId}/transfer_admin`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ conversation: { admin_id: adminId } }),
+      body: JSON.stringify({ user_id: adminId }),
     });
 
     await handleUnauthorized(response);
