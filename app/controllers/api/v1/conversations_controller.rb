@@ -58,13 +58,17 @@ module Api
             end
 
             # Broadcast update
-            ActionCable.server.broadcast(
-              "user_conversations",
-              {
-                action: 'group_updated',
-                conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
-              }
-            )
+            payload = {
+              action: 'group_updated',
+              conversation: ConversationBlueprint.render_as_hash(conversation, view: :with_participants)
+            }
+
+            conversation.users.each do |u|
+              ActionCable.server.broadcast("user_#{u.id}_conversations", payload)
+            end
+
+            # Also broadcast to the active chat channel
+            ActionCable.server.broadcast("conversation_#{conversation.id}", payload)
 
             render json: {
               success: true,
