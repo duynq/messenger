@@ -7,8 +7,9 @@ import { useTranslations } from 'next-intl';
 import { GroupAvatar } from './GroupAvatar';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown } from 'lucide-react';
-import { deleteMessageAction, updateMessageAction, reactToMessageAction } from '@/actions/chat';
+import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell } from 'lucide-react';
+import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction } from '@/actions/chat';
+import { toast } from 'sonner';
 
 type User = {
   id: number;
@@ -40,6 +41,7 @@ interface ChatMessagesProps {
     admin_id: number;
     avatar_url?: string;
     read_receipts?: Record<number, string>;
+    is_muted?: boolean;
     users: { id: number; full_name: string; email: string; is_online?: boolean; last_seen_at?: string; avatar_url?: string }[];
   };
   availableUsers?: { id: number; full_name: string; email: string }[];
@@ -72,6 +74,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const [isUpdating, setIsUpdating] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<{ id: number, sender_name: string, content: string | null } | null>(null);
   const [reactingToMessageId, setReactingToMessageId] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState(conversation?.is_muted || false);
+  const [isMuteLoading, setIsMuteLoading] = useState(false);
   const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -273,6 +277,23 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
   const chatTitle = conversation?.is_group && conversation?.name ? conversation.name : (otherUser?.full_name || `Conversation #${conversationId}`);
 
+  const handleToggleMute = async () => {
+    setIsMuteLoading(true);
+    try {
+      const result = isMuted
+        ? await unmuteConversationAction(conversationId)
+        : await muteConversationAction(conversationId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setIsMuted(!isMuted);
+        toast.success(isMuted ? 'Notifications enabled' : 'Notifications muted');
+      }
+    } finally {
+      setIsMuteLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between p-4 border-b border-white/5 bg-background sticky top-0 z-10 shrink-0">
@@ -302,18 +323,44 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
                 </span>
               </div>
             )}
+            {isMuted && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <BellOff className="w-3 h-3 text-white/30" />
+                <span className="text-[11px] text-white/30">Muted</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {conversation?.is_group && (
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
-            title="Group Settings"
+            onClick={handleToggleMute}
+            disabled={isMuteLoading}
+            className={`p-2 rounded-xl transition-colors shrink-0 ${
+              isMuted
+                ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+            title={isMuted ? 'Unmute notifications' : 'Mute notifications'}
           >
-            <Settings2 size={20} />
+            {isMuteLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isMuted ? (
+              <BellOff size={20} />
+            ) : (
+              <Bell size={20} />
+            )}
           </button>
-        )}
+          {conversation?.is_group && (
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
+              title="Group Settings"
+            >
+              <Settings2 size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       <GroupSettingsModal
@@ -322,6 +369,9 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
         conversation={conversation}
         currentUser={currentUser}
         availableUsers={availableUsers || []}
+        isMuted={isMuted}
+        onMuteToggle={handleToggleMute}
+        isMuteLoading={isMuteLoading}
       />
 
       <div 

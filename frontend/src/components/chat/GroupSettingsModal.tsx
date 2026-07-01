@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown } from 'lucide-react';
+import { X, Settings2, UserPlus, UserMinus, Loader2, LogOut, Search, ChevronDown, BellOff, Bell } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { addParticipantAction, removeParticipantAction, updateGroupAvatarAction } from '@/actions/chat';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -22,6 +22,7 @@ export interface GroupConversation {
   admin_id: number;
   users: ConversationUser[];
   avatar_url?: string;
+  is_muted?: boolean;
 }
 
 interface GroupSettingsModalProps {
@@ -30,9 +31,12 @@ interface GroupSettingsModalProps {
   conversation: GroupConversation;
   currentUser: { id?: number; email: string };
   availableUsers: { id: number; full_name: string; email: string }[];
+  isMuted: boolean;
+  onMuteToggle: () => void;
+  isMuteLoading: boolean;
 }
 
-export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser, availableUsers }: GroupSettingsModalProps) {
+export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser, availableUsers, isMuted, onMuteToggle, isMuteLoading }: GroupSettingsModalProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedUserToAdd, setSelectedUserToAdd] = useState<number | ''>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -211,6 +215,33 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
 
             <h3 className="text-xl font-bold text-white">{conversation.name}</h3>
             <p className="text-sm text-white/50 mt-1">{conversation.users.length} members</p>
+          </div>
+
+          {/* Notifications Toggle */}
+          <div className="mb-6 flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex items-center gap-3">
+              {isMuted ? (
+                <BellOff className="w-5 h-5 text-yellow-400" />
+              ) : (
+                <Bell className="w-5 h-5 text-white/70" />
+              )}
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-white">Notifications</span>
+                <span className="text-xs text-white/40">{isMuted ? 'Muted' : 'Enabled'}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onMuteToggle}
+              disabled={isMuteLoading}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                isMuted ? 'bg-white/20' : 'bg-brand-500'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                isMuted ? 'left-0.5' : 'left-[22px]'
+              }`} />
+            </button>
           </div>
 
           {isAdmin && usersToAdd.length > 0 && (

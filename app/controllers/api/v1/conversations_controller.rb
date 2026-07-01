@@ -89,6 +89,20 @@ module Api
         end
       end
 
+      def mute
+        conversation = Current.user.conversations.find(params[:id])
+        participant = conversation.conversation_participants.find_by!(user_id: Current.user.id)
+        participant.update!(muted_at: Time.current)
+        render json: { success: true, muted: true }
+      end
+
+      def unmute
+        conversation = Current.user.conversations.find(params[:id])
+        participant = conversation.conversation_participants.find_by!(user_id: Current.user.id)
+        participant.update!(muted_at: nil)
+        render json: { success: true, muted: false }
+      end
+
       private
 
       def conversation_params
