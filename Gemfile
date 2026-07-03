@@ -25,6 +25,10 @@ gem "image_processing", "~> 1.2"
 gem "activesupport"
 gem "redis", "~> 5.0"
 
+# Search
+gem "searchkick", "~> 5.3"
+gem "elasticsearch", "~> 8.0"
+
 group :development, :test do
   gem "debug", platforms: %i[mri mingw x64_mingw]
   gem "rspec-rails", "~> 6.0"
