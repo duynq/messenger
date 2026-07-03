@@ -10,6 +10,26 @@ class Message < ApplicationRecord
 
   enum message_type: { user: 'user', system: 'system' }
 
+  searchkick word_start: [:content],
+             highlight: [:content],
+             callbacks: :async
+
+  scope :search_import, -> { active }
+
+  def search_data
+    {
+      content: content,
+      conversation_id: conversation_id,
+      user_id: user_id,
+      message_type: message_type,
+      created_at: created_at
+    }
+  end
+
+  def should_index?
+    deleted_at.nil? && message_type == "user"
+  end
+
   validates :content, presence: true, if: -> { user? && !attachments.attached? }
   validate :acceptable_attachments
   

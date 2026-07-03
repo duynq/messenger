@@ -7,35 +7,15 @@ module Api
         query = params[:q].to_s.strip
         return render json: { messages: [], meta: { has_next: false } } if query.blank?
 
-        # Base scope: user's conversations
-        conversations = Current.user.conversations
+        use_es = ELASTICSEARCH_ENABLED && params[:use_es] != "false"
+        service = MessageSearchService.new(Current.user, use_elasticsearch: use_es)
 
-        # Optionally filter by specific conversation
-        if params[:conversation_id].present?
-          conversations = conversations.where(id: params[:conversation_id])
-        end
+        page = (params[:page] || 1).to_i
+        per_page = 20
 
-        # Join conversations and apply full-text search
-        messages_scope = MessageSearchQuery.new(conversations).search(query)
+        result = service.search(query, conversation_id: params[:conversation_id], page: page, per_page: per_page)
 
-        # Count might be slow, but for pagination it's required. We can use a simpler approach or Pagy's standard.
-        @pagy, records = pagy(messages_scope)
-
-        # Include users (senders) to avoid N+1
-        ActiveRecord::Associations::Preloader.new(records: records, associations: { user: { avatar_attachment: :blob } }).call
-
-        render json: {
-          messages: MessageSearchPresenter.format_messages(records, self),
-          meta: {
-            current_page: @pagy.page,
-            next_page: @pagy.next,
-            has_next: @pagy.next.present?,
-            total_pages: @pagy.pages,
-            total_count: @pagy.count
-          }
-        }
-      rescue Pagy::OverflowError
-        render json: { messages: [], meta: { has_next: false } }
+        render json: result
       end
     end
   end
