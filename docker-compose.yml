@@ -92,6 +92,7 @@ services:
       DATABASE_URL: postgres://messenger:messenger_password@db:5432/messenger_development
       REDIS_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_ENABLED: "true"
       RAILS_ENV: development
       MINIO_ENDPOINT: http://minio:9000
       MINIO_PUBLIC_ENDPOINT: http://localhost:9000
@@ -118,6 +119,7 @@ services:
       DATABASE_URL: postgres://messenger:messenger_password@db:5432/messenger_development
       REDIS_URL: redis://redis:6379/1
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_ENABLED: "true"
       RAILS_ENV: development
       MINIO_ENDPOINT: http://minio:9000
       MINIO_PUBLIC_ENDPOINT: http://localhost:9000
