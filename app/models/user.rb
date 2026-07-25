@@ -13,6 +13,18 @@ class User < ApplicationRecord
 
   has_one_attached :avatar
 
+  searchkick word_start: [:first_name, :last_name, :email],
+             callbacks: :async
+
+  def search_data
+    {
+      first_name: first_name,
+      last_name: last_name,
+      full_name: "#{first_name} #{last_name}",
+      email: email
+    }
+  end
+
   # ──────────────────────────────────────────────
   # Validations
   # ──────────────────────────────────────────────

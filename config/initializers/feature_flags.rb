@@ -1,0 +1,1 @@
+ELASTICSEARCH_ENABLED = ENV.fetch("ELASTICSEARCH_ENABLED", "false") == "true"
