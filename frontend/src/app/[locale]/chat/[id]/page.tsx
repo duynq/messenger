@@ -5,7 +5,6 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { ChatMessages } from '@/components/chat/ChatMessages';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 
 type User = {
   id: number;
@@ -28,24 +27,19 @@ export default async function ChatRoomPage({
   const resolvedParams = await params;
   const conversationId = Number(resolvedParams.id);
 
-  // Fetch both the current user (from dashboard API) and the messages in parallel
-  const [dashboardData, messagesData, usersData] = await Promise.all([
+  // User options for group settings are loaded lazily when the picker is opened.
+  const [dashboardData, messagesData] = await Promise.all([
     serverFetchJson<{ user: User }>('/dashboard'),
-    serverFetchJson<{ messages: Message[], meta: any, conversation: any }>(`/conversations/${conversationId}/messages`).catch(() => ({ messages: [], meta: null, conversation: null })),
-    serverFetchJson<{ users: User[] }>('/users').catch(() => ({ users: [] }))
+    serverFetchJson<{ messages: Message[], meta: any, conversation: any }>(`/conversations/${conversationId}/messages`).catch(() => ({ messages: [], meta: null, conversation: null }))
   ]);
 
   const currentUser = dashboardData.user;
   const conversation = messagesData.conversation;
-  const availableUsers = usersData.users || [];
 
   // Reverse messages so newest are at the bottom.
   // The API returns desc order (newest first), we want them asc (newest last) for chat UI.
   const messages = [...(messagesData.messages || [])].reverse();
   
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-
   const chatTitle = conversation?.is_group && conversation?.name
     ? conversation.name
     : `Conversation #${conversationId}`;
@@ -59,9 +53,7 @@ export default async function ChatRoomPage({
             initialMessages={messages} 
             conversationId={conversationId} 
             currentUser={currentUser} 
-            token={token}
             conversation={conversation}
-            availableUsers={availableUsers}
             initialMeta={messagesData.meta}
           />
         </GlassCard>

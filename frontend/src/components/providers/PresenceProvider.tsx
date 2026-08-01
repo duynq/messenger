@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { createConsumer } from '@rails/actioncable';
+import { useCable } from '@/components/providers/CableProvider';
 
 interface UserPresence {
   isOnline: boolean;
@@ -20,15 +20,12 @@ const PresenceContext = createContext<PresenceContextType>({
 
 export const usePresence = () => useContext(PresenceContext);
 
-export function PresenceProvider({ children, token }: { children: ReactNode; token?: string }) {
+export function PresenceProvider({ children }: { children: ReactNode }) {
   const [presenceMap, setPresenceMap] = useState<Record<number, UserPresence>>({});
+  const cable = useCable();
 
   useEffect(() => {
-    if (!token) return;
-
-    // Use ws:// or wss:// based on current protocol, or hardcode fallback
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000/cable';
-    const cable = createConsumer(`${wsUrl}?token=${token}`);
+    if (!cable) return;
 
     const subscription = cable.subscriptions.create('PresenceChannel', {
       connected() {
@@ -50,9 +47,8 @@ export function PresenceProvider({ children, token }: { children: ReactNode; tok
 
     return () => {
       subscription.unsubscribe();
-      cable.disconnect();
     };
-  }, [token]);
+  }, [cable]);
 
   const getUserPresence = (userId: number, initialIsOnline?: boolean, initialLastSeenAt?: string | null): UserPresence => {
     return presenceMap[userId] || { isOnline: initialIsOnline || false, lastSeenAt: initialLastSeenAt || null };

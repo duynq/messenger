@@ -33,11 +33,6 @@ async function persistAuthToken(token: string) {
   });
 }
 
-export async function getAuthTokenAction(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get('token')?.value ?? null;
-}
-
 export async function loginAction(
   prevState: ActionState | undefined,
   formData: FormData,

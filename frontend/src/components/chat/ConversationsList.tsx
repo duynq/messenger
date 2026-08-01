@@ -7,9 +7,9 @@ import { AnimatedButton } from '@/components/ui/AnimatedButton';
 import { MessageCircle, Loader2, MessageSquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatTimeAgo } from '@/lib/utils';
-import { createConsumer } from '@rails/actioncable';
 import type { User } from '@/components/providers/AuthProvider';
 import { usePresence } from '@/components/providers/PresenceProvider';
+import { useCable } from '@/components/providers/CableProvider';
 import { GroupAvatar } from './GroupAvatar';
 
 import { CreateGroupModal } from './CreateGroupModal';
@@ -44,15 +44,13 @@ export function ConversationsList({
   meta,
   currentUser,
   currentFilter = 'all',
-  availableUsers = [],
-  token
+  availableUsers = []
 }: { 
   conversations: Conversation[];
   meta: Meta | null;
   currentUser: { email: string; full_name: string; id?: number };
   currentFilter?: string;
   availableUsers?: any[];
-  token?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,6 +58,7 @@ export function ConversationsList({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [realtimeConversations, setRealtimeConversations] = useState<Conversation[]>(conversations);
   const { getUserPresence } = usePresence();
+  const cable = useCable();
   const t = useTranslations('chat');
 
   useEffect(() => {
@@ -68,12 +67,9 @@ export function ConversationsList({
   }, [conversations, currentFilter]);
 
   useEffect(() => {
-    if (!token || !currentUser.id) return;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-    const wsUrl = apiUrl.replace('http', 'ws').replace('/api/v1', '') + '/cable?token=' + token;
-    const consumer = createConsumer(wsUrl);
+    if (!cable || !currentUser.id) return;
 
-    const subscription = consumer.subscriptions.create(
+    const subscription = cable.subscriptions.create(
       { channel: 'UserConversationsChannel' },
       {
         received(data: any) {
@@ -149,9 +145,8 @@ export function ConversationsList({
 
     return () => {
       subscription.unsubscribe();
-      consumer.disconnect();
     };
-  }, [token, currentUser.id, router]);
+  }, [cable, currentUser.id, router]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage === meta?.current_page || newPage < 1 || newPage > (meta?.total_pages || 1)) return;

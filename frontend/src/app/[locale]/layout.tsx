@@ -8,8 +8,8 @@ import { routing } from '@/i18n/routing';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { PresenceProvider } from '@/components/providers/PresenceProvider';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
+import { CableProvider } from '@/components/providers/CableProvider';
 import { getSessionUser } from '@/lib/session';
-import { cookies } from 'next/headers';
 import '../globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -39,8 +39,6 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
   const user = await getSessionUser();
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
 
   return (
     <html lang={locale} className="dark" suppressHydrationWarning>
@@ -50,15 +48,17 @@ export default async function LocaleLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <AuthProvider user={user}>
-            <PresenceProvider token={token}>
-              <NotificationProvider token={token}>
-                {children}
-                <Toaster
-                  theme="dark"
-                  toastOptions={{ className: 'glass-panel !border-white/10 !text-white' }}
-                />
-              </NotificationProvider>
-            </PresenceProvider>
+            <CableProvider authenticated={Boolean(user)}>
+              <PresenceProvider>
+                <NotificationProvider>
+                  {children}
+                  <Toaster
+                    theme="dark"
+                    toastOptions={{ className: 'glass-panel !border-white/10 !text-white' }}
+                  />
+                </NotificationProvider>
+              </PresenceProvider>
+            </CableProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

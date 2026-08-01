@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
-import { createConsumer } from '@rails/actioncable';
 import { useTranslations } from 'next-intl';
 import { GroupAvatar } from './GroupAvatar';
 import { MessageForm } from './MessageForm';
 import { GroupSettingsModal } from './GroupSettingsModal';
 import { Settings2, Loader2, Trash2, Pencil, X, Check, CheckCheck, CornerUpLeft, SmilePlus, FileDown, BellOff, Bell, Search } from 'lucide-react';
-import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction } from '@/actions/chat';
+import { deleteMessageAction, updateMessageAction, reactToMessageAction, muteConversationAction, unmuteConversationAction, fetchConversationMessagesAction, markConversationReadAction } from '@/actions/chat';
 import { toast } from 'sonner';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { MessageSearchModal } from './MessageSearchModal';
@@ -48,13 +47,12 @@ interface ChatMessagesProps {
     is_muted?: boolean;
     users: { id: number; full_name: string; email: string; is_online?: boolean; last_seen_at?: string; avatar_url?: string }[];
   };
-  availableUsers?: { id: number; full_name: string; email: string }[];
-  token: string | undefined;
   initialMeta?: { has_next: boolean; next_cursor: number | null };
 }
 
 import { formatTimeAgo } from '@/lib/utils';
 import { usePresence } from '@/components/providers/PresenceProvider';
+import { useCable } from '@/components/providers/CableProvider';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -65,7 +63,7 @@ function formatTypingText(typingUsers: Record<number, string>): string {
   return `${names[0]}, ${names[1]} and ${names.length - 2} others are typing...`;
 }
 
-export function ChatMessages({ initialMessages, conversationId, currentUser, token, conversation, availableUsers, initialMeta }: ChatMessagesProps) {
+export function ChatMessages({ initialMessages, conversationId, currentUser, conversation, initialMeta }: ChatMessagesProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages || []);
   const [readReceipts, setReadReceipts] = useState<Record<number, string>>(conversation?.read_receipts || {});
   const [hasNext, setHasNext] = useState(initialMeta?.has_next || false);
@@ -90,7 +88,13 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   const isInitialRender = useRef(true);
   const typingTimers = useRef<Record<number, NodeJS.Timeout>>({});
   const subscriptionRef = useRef<any>(null);
+  const pendingReadMessageId = useRef<number | null>(null);
+  const lastMarkedReadMessageId = useRef<number | null>(null);
+  const markReadInFlight = useRef(false);
+  const activeConversationIdRef = useRef(conversationId);
+  activeConversationIdRef.current = conversationId;
   const { getUserPresence } = usePresence();
+  const cable = useCable();
   const t = useTranslations('chat');
   const tSys = useTranslations('systemMessages');
   const router = useRouter();
@@ -128,41 +132,69 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     }
   }, [messages]);
 
-  useEffect(() => {
-    if (!token || !conversationId) return;
+  const markPendingMessagesAsRead = useCallback(async () => {
+    if (
+      pendingReadMessageId.current === null ||
+      markReadInFlight.current ||
+      document.visibilityState !== 'visible' ||
+      !isAtBottom.current
+    ) {
+      return;
+    }
 
-    const markAsRead = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-        await fetch(`${apiUrl}/conversations/${conversationId}/read`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-      } catch (e) {
-        console.error('Failed to mark as read', e);
+    markReadInFlight.current = true;
+    try {
+      while (
+        activeConversationIdRef.current === conversationId &&
+        pendingReadMessageId.current !== null &&
+        document.visibilityState === 'visible' &&
+        isAtBottom.current
+      ) {
+        const messageId: number = pendingReadMessageId.current;
+        if (messageId === lastMarkedReadMessageId.current) {
+          pendingReadMessageId.current = null;
+          break;
+        }
+
+        const result = await markConversationReadAction(conversationId);
+        if (activeConversationIdRef.current !== conversationId) break;
+        if ('error' in result) break;
+
+        lastMarkedReadMessageId.current = messageId;
+        if (pendingReadMessageId.current === messageId) {
+          pendingReadMessageId.current = null;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to mark conversation as read', e);
+    } finally {
+      markReadInFlight.current = false;
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    pendingReadMessageId.current = null;
+    lastMarkedReadMessageId.current = null;
+  }, [conversationId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void markPendingMessagesAsRead();
       }
     };
 
-    markAsRead();
-  }, [messages.length, conversationId, token]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [markPendingMessagesAsRead]);
 
   const loadOlderMessages = async () => {
     if (!nextCursor || isLoadingOlder) return;
     setIsLoadingOlder(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-      const res = await fetch(`${apiUrl}/conversations/${conversationId}/messages?before_message_id=${nextCursor}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await fetchConversationMessagesAction(conversationId, nextCursor);
+      if (data.messages) {
         const olderMessages = [...data.messages].reverse();
         
         const oldHeight = containerRef.current?.scrollHeight;
@@ -195,6 +227,10 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
     // Check if we are near the bottom (within 50px)
     isAtBottom.current = scrollHeight - scrollTop - clientHeight < 50;
 
+    if (isAtBottom.current) {
+      void markPendingMessagesAsRead();
+    }
+
     if (scrollTop === 0 && hasNext && !isLoadingOlder) {
       loadOlderMessages();
     }
@@ -224,14 +260,9 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!cable) return;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-    const wsUrl = apiUrl.replace('http', 'ws').replace('/api/v1', '') + '/cable?token=' + token;
-    
-    const consumer = createConsumer(wsUrl);
-
-    const subscription = consumer.subscriptions.create(
+    const subscription = cable.subscriptions.create(
       { channel: 'ConversationChannel', conversation_id: conversationId },
       {
         received(data: any) {
@@ -285,6 +316,11 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
               }
               return [...prevMessages, data.message];
             });
+
+            if (data.message.user?.id !== currentUser.id) {
+              pendingReadMessageId.current = data.message.id;
+              void markPendingMessagesAsRead();
+            }
           }
         }
       }
@@ -297,9 +333,8 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
       Object.values(typingTimers.current).forEach(clearTimeout);
       typingTimers.current = {};
       subscription.unsubscribe();
-      consumer.disconnect();
     };
-  }, [conversationId, token, currentUser.id]);
+  }, [cable, conversationId, currentUser.id, markPendingMessagesAsRead, router]);
 
   const otherUser = conversation?.users?.find((u) => u.id !== currentUser.id) || conversation?.users?.[0];
   const presence = otherUser ? getUserPresence(otherUser.id, otherUser.is_online, otherUser.last_seen_at) : null;
@@ -404,7 +439,6 @@ export function ChatMessages({ initialMessages, conversationId, currentUser, tok
           onClose={() => setIsSettingsOpen(false)}
           conversation={conversation as any}
           currentUser={currentUser}
-          availableUsers={availableUsers || []}
           isMuted={isMuted}
           onMuteToggle={handleToggleMute}
           isMuteLoading={isMuteLoading}

@@ -10,6 +10,40 @@ RSpec.describe "Api::V1::Messages", type: :request do
     conv
   end
 
+  describe "GET /api/v1/conversations/:conversation_id/messages" do
+    it "marks the conversation and its notifications as read on the initial load" do
+      participant = conversation.conversation_participants.find_by!(user: user)
+      message = create(:message, conversation: conversation, user: other_user)
+      notification = Notification.create!(
+        user: user,
+        actor: other_user,
+        notifiable: message,
+        notification_type: "new_message",
+        data: { conversation_id: conversation.id }
+      )
+
+      get "/api/v1/conversations/#{conversation.id}/messages", headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      expect(participant.reload.last_read_at).to be_present
+      expect(notification.reload.read_at).to be_present
+    end
+
+    it "does not update read state when loading older messages" do
+      participant = conversation.conversation_participants.find_by!(user: user)
+      original_last_read_at = 1.hour.ago.change(usec: 0)
+      participant.update!(last_read_at: original_last_read_at)
+      message = create(:message, conversation: conversation, user: other_user)
+
+      get "/api/v1/conversations/#{conversation.id}/messages",
+        params: { before_message_id: message.id },
+        headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      expect(participant.reload.last_read_at).to eq(original_last_read_at)
+    end
+  end
+
   describe "POST /api/v1/conversations/:conversation_id/messages" do
     context "with valid parameters" do
       it "creates a new message and returns 201 Created" do

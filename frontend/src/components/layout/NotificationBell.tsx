@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useNotifications, type Notification } from '@/components/providers/NotificationProvider';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { activeConversationId, isNotificationForConversation } from '@/lib/notifications';
 
 function formatTimeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -42,6 +43,11 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const currentConversationId = activeConversationId(pathname);
+  const visibleNotifications = notifications.filter(notification =>
+    !isNotificationForConversation(notification, currentConversationId)
+  );
 
   // Close on outside click
   useEffect(() => {
@@ -113,12 +119,12 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
 
           {/* Notification List */}
           <div className="max-h-96 overflow-y-auto hide-scrollbar">
-            {notifications.length === 0 ? (
+            {visibleNotifications.length === 0 ? (
               <div className="px-4 py-10 text-center text-white/40 text-sm">
                 No notifications yet
               </div>
             ) : (
-              notifications.slice(0, 20).map((notification) => {
+              visibleNotifications.slice(0, 20).map((notification) => {
                 const isUnread = !notification.read_at;
 
                 return (
@@ -166,7 +172,7 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
             )}
           </div>
           {/* Footer */}
-          {notifications.length > 0 && (
+          {visibleNotifications.length > 0 && (
             <div className="px-4 py-2 border-t border-white/10">
               <button
                 type="button"

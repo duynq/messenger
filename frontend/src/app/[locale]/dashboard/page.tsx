@@ -1,5 +1,4 @@
 import { getTranslations } from 'next-intl/server';
-import { cookies } from 'next/headers';
 import { serverFetchJson } from '@/lib/server-api';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -27,8 +26,6 @@ export default async function DashboardPage({
   const cursor = (resolvedSearchParams?.cursor as string) || '';
   const convPage = Number(resolvedSearchParams?.conv_page) || 1;
   const convFilter = (resolvedSearchParams?.conv_filter as string) || 'all';
-  const cookieStore = await cookies();
-
   // Fetch dashboard data, users, and conversations in parallel
   const [data, usersData, conversationsData] = await Promise.all([
     serverFetchJson<DashboardData>('/dashboard'),
@@ -92,7 +89,6 @@ export default async function DashboardPage({
               currentUser={user}
               currentFilter={convFilter}
               availableUsers={usersData.users || []}
-              token={cookieStore.get('token')?.value}
             />
           </div>
         )}

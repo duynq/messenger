@@ -74,5 +74,33 @@ RSpec.describe UserSearchService do
         has_next: false
       )
     end
+
+    it "uses limit plus one without COUNT for lightweight cursor pagination" do
+      create_list(:user, 3)
+      sql = []
+
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |event|
+        sql << event.payload[:sql] unless event.payload[:name] == "SCHEMA"
+      end
+
+      result = described_class.call(
+        user: current_user,
+        per_page: 2,
+        use_elasticsearch: false,
+        include_total_count: false
+      )
+
+      expect(result.fetch(:users).size).to eq(2)
+      expect(result.fetch(:meta)).to include(
+        total_pages: nil,
+        total_count: nil,
+        has_previous: false,
+        has_next: true
+      )
+      expect(result.dig(:meta, :next_cursor)).to be_present
+      expect(sql.grep(/COUNT\(\*\)/i)).to be_empty
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+    end
   end
 end

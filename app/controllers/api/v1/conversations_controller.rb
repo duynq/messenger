@@ -23,18 +23,7 @@ module Api
 
       def read
         conversation = Current.user.conversations.find(params[:id])
-        participant = conversation.conversation_participants.find_by(user_id: Current.user.id)
-
-        if participant&.update(last_read_at: Time.current)
-          ActionCable.server.broadcast(
-            "conversation_#{conversation.id}",
-            {
-              action: 'read_receipt',
-              user_id: Current.user.id,
-              last_read_at: participant.last_read_at
-            }
-          )
-        end
+        Conversations::MarkAsReadService.call(conversation: conversation, user: Current.user)
 
         render json: { success: true }
       end
