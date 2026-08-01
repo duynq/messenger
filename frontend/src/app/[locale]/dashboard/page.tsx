@@ -22,8 +22,9 @@ export default async function DashboardPage({
 }) {
   const t = await getTranslations();
   const resolvedSearchParams = await searchParams;
-  const page = Number(resolvedSearchParams?.page) || 1;
+  const page = Math.max(Number(resolvedSearchParams?.page) || 1, 1);
   const q = (resolvedSearchParams?.q as string) || '';
+  const cursor = (resolvedSearchParams?.cursor as string) || '';
   const convPage = Number(resolvedSearchParams?.conv_page) || 1;
   const convFilter = (resolvedSearchParams?.conv_filter as string) || 'all';
   const cookieStore = await cookies();
@@ -31,7 +32,11 @@ export default async function DashboardPage({
   // Fetch dashboard data, users, and conversations in parallel
   const [data, usersData, conversationsData] = await Promise.all([
     serverFetchJson<DashboardData>('/dashboard'),
-    serverFetchJson<any>(q ? `/users?page=${page}&q=${encodeURIComponent(q)}` : `/users?page=${page}`).catch(() => ({ users: [], meta: null })),
+    serverFetchJson<any>(`/users?${new URLSearchParams({
+      page: page.toString(),
+      ...(q ? { q } : {}),
+      ...(cursor ? { cursor } : {}),
+    })}`).catch(() => ({ users: [], meta: null })),
     serverFetchJson<any>(`/conversations?page=${convPage}&filter=${convFilter}`).catch(() => ({ conversations: [], meta: null }))
   ]);
 

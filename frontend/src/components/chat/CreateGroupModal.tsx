@@ -22,7 +22,7 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
   const [usersList, setUsersList] = useState(availableUsers);
-  const [page, setPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
@@ -35,10 +35,10 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
       const fetchInitial = async () => {
         try {
           const { fetchUsersAction } = await import('@/actions/chat');
-          const data = await fetchUsersAction(1, debouncedSearchQuery);
+          const data = await fetchUsersAction(null, debouncedSearchQuery);
           if (data.users) {
             setUsersList(data.users);
-            setPage(1);
+            setNextCursor(data.meta?.next_cursor ?? null);
             setHasMore(data.meta?.has_next ?? false);
           }
         } catch (error) {
@@ -55,18 +55,17 @@ export function CreateGroupModal({ isOpen, onClose, availableUsers, currentUser 
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollHeight - scrollTop <= clientHeight + 10 && hasMore && !isLoadingMore) {
       setIsLoadingMore(true);
-      const nextPage = page + 1;
       
       try {
         const { fetchUsersAction } = await import('@/actions/chat');
-        const data = await fetchUsersAction(nextPage, debouncedSearchQuery);
+        const data = await fetchUsersAction(nextCursor, debouncedSearchQuery);
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
             const newUsers = data.users.filter((newUser: {id: number, full_name: string, email: string}) => !prev.some(u => u.id === newUser.id));
             return [...prev, ...newUsers];
           });
-          setPage(nextPage);
+          setNextCursor(data.meta?.next_cursor ?? null);
           setHasMore(data.meta?.has_next ?? false);
         } else {
           setHasMore(false);

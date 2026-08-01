@@ -5,13 +5,18 @@ module Api
 
       def index
         use_es = ELASTICSEARCH_ENABLED && params[:use_es] != "false"
-        service = UserSearchService.new(Current.user, use_elasticsearch: use_es)
-        
         query = params[:q].to_s.strip
-        page = (params[:page] || 1).to_i
+        page = params[:page].present? ? [params[:page].to_i, 1].max : nil
         per_page = 20
 
-        result = service.search(query, page: page, per_page: per_page)
+        result = UserSearchService.call(
+          user: Current.user,
+          query: query,
+          cursor: params[:cursor],
+          page: page,
+          per_page: per_page,
+          use_elasticsearch: use_es
+        )
 
         render json: result, status: :ok
       end

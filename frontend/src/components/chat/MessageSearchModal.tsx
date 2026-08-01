@@ -6,8 +6,25 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { searchMessagesAction } from '@/actions/chat';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import DOMPurify from 'isomorphic-dompurify';
 import { useTranslations } from 'next-intl';
+
+function HighlightedSnippet({ snippet }: { snippet: string }) {
+  let isHighlighted = false;
+
+  return snippet.split(/(<\/?b>)/gi).map((part, index) => {
+    if (/^<b>$/i.test(part)) {
+      isHighlighted = true;
+      return null;
+    }
+
+    if (/^<\/b>$/i.test(part)) {
+      isHighlighted = false;
+      return null;
+    }
+
+    return isHighlighted ? <b key={index}>{part}</b> : part;
+  });
+}
 
 interface SearchResult {
   id: number;
@@ -215,10 +232,9 @@ export function MessageSearchModal({ isOpen, onClose, conversationId }: MessageS
                   
                   {/* Snippet with highlighted text */}
                   {result.snippet ? (
-                    <p 
-                      className="text-sm text-white/70 pl-8 pr-4 line-clamp-2"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(result.snippet) }}
-                    />
+                    <p className="text-sm text-white/70 pl-8 pr-4 line-clamp-2">
+                      <HighlightedSnippet snippet={result.snippet} />
+                    </p>
                   ) : (
                     <p className="text-sm text-white/70 pl-8 pr-4 line-clamp-2">
                       {result.content}

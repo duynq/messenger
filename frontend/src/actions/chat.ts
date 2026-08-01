@@ -4,9 +4,12 @@ import { z } from 'zod';
 import { serverFetch, handleUnauthorized } from '@/lib/server-api';
 import { redirect } from 'next/navigation';
 
-export async function fetchUsersAction(page: number, q?: string) {
+export async function fetchUsersAction(cursor?: string | null, q?: string) {
   try {
-    const url = q ? `/users?page=${page}&q=${encodeURIComponent(q)}` : `/users?page=${page}`;
+    const params = new URLSearchParams();
+    if (cursor) params.set('cursor', cursor);
+    if (q) params.set('q', q);
+    const url = `/users?${params.toString()}`;
     const response = await serverFetch(url, {
       method: 'GET',
       cache: 'no-store',
