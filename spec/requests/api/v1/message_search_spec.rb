@@ -33,7 +33,7 @@ RSpec.describe "Api::V1::MessageSearch", type: :request do
       expect(parsed_response.fetch("messages").pluck("id")).to eq([match.id])
     end
 
-    it "returns no results for a conversation the user cannot access" do
+    it "returns no PostgreSQL results for a conversation the user cannot access" do
       inaccessible_conversation = create(:conversation)
       inaccessible_conversation.users << [sender, create(:user)]
       create(:message, conversation: inaccessible_conversation, user: sender, content: "private needle")
@@ -44,6 +44,41 @@ RSpec.describe "Api::V1::MessageSearch", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect_search_contract(parsed_response, total_count: 0, total_pages: 0, has_next: false)
+    end
+
+    it "searches Elasticsearch with the resolved participant conversation ID" do
+      message = create(:message, conversation: first_conversation, user: sender, content: "elastic needle")
+      results = searchkick_results(message)
+      allow(Searchkick.client).to receive(:ping).and_return(true)
+      allow(Message).to receive(:search).and_return(results)
+
+      get search_path,
+        params: { q: "needle", conversation_id: first_conversation.id },
+        headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_response.fetch("messages").pluck("id")).to eq([message.id])
+      expect(Message).to have_received(:search).with(
+        "needle",
+        hash_including(where: { conversation_id: [first_conversation.id] })
+      )
+    end
+
+    it "does not query Elasticsearch for a conversation the user cannot access" do
+      inaccessible_conversation = create(:conversation)
+      inaccessible_conversation.users << [sender, create(:user)]
+      create(:message, conversation: inaccessible_conversation, user: sender, content: "private needle")
+      allow(Searchkick.client).to receive(:ping)
+      allow(Message).to receive(:search)
+
+      get search_path,
+        params: { q: "needle", conversation_id: inaccessible_conversation.id },
+        headers: auth_headers(user)
+
+      expect(response).to have_http_status(:ok)
+      expect_search_contract(parsed_response, total_count: 0, total_pages: 0, has_next: false)
+      expect(Searchkick.client).not_to have_received(:ping)
+      expect(Message).not_to have_received(:search)
     end
 
     it "does not turn an invalid conversation filter into a global search" do
@@ -145,6 +180,16 @@ RSpec.describe "Api::V1::MessageSearch", type: :request do
 
   def create_conversation_for(*users)
     create(:conversation).tap { |conversation| conversation.users << users }
+  end
+
+  def searchkick_results(message)
+    instance_double(
+      "Searchkick::Results",
+      with_highlights: [[message, { content: ["elastic <b>needle</b>"] }]],
+      current_page: 1,
+      total_pages: 1,
+      total_count: 1
+    )
   end
 
   def expect_search_contract(body, total_count:, total_pages:, has_next:)
