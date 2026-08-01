@@ -4,14 +4,18 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
-import { UserPlus, Loader2, MessageCircle, Search } from 'lucide-react';
+import { Loader2, MessageCircle, Search } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { fetchUsersAction, startDirectConversationAction } from '@/actions/chat';
+import { startDirectConversationAction } from '@/actions/chat';
 import type { User } from '@/components/providers/AuthProvider';
 
 interface Meta {
   current_page: number;
   total_pages: number;
+  total_count: number;
+  previous_cursor: string | null;
+  next_cursor: string | null;
+  has_previous: boolean;
   has_next: boolean;
 }
 
@@ -27,6 +31,8 @@ export function UsersList({
   const [isPending, startTransition] = useTransition();
   const [isNavigating, setIsNavigating] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [goToPage, setGoToPage] = useState(meta?.current_page.toString() || '1');
+  const [isGoToPageOpen, setIsGoToPageOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
@@ -40,6 +46,7 @@ export function UsersList({
       } else {
         params.delete('q');
       }
+      params.delete('cursor');
       params.set('page', '1');
       router.push(`?${params.toString()}`);
     }
@@ -48,55 +55,65 @@ export function UsersList({
   // When props change (navigation completes), stop navigating state
   useEffect(() => {
     setIsNavigating(false);
-  }, [users]);
+    setGoToPage(meta?.current_page.toString() || '1');
+  }, [users, meta?.current_page]);
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage === meta?.current_page || newPage < 1 || newPage > (meta?.total_pages || 1)) return;
+  const navigateWithCursor = (cursor: string | null, targetPage: number) => {
+    if (!cursor) return;
     setIsNavigating(true);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
+    params.set('cursor', cursor);
+    params.set('page', targetPage.toString());
     router.push(`?${params.toString()}`);
+  };
+
+  const handlePageChange = (targetPage: number) => {
+    if (!meta || targetPage < 1 || targetPage > meta.total_pages || targetPage === meta.current_page) return;
+
+    if (targetPage === meta.current_page - 1) {
+      navigateWithCursor(meta.previous_cursor, targetPage);
+      return;
+    }
+
+    if (targetPage === meta.current_page + 1) {
+      navigateWithCursor(meta.next_cursor, targetPage);
+      return;
+    }
+
+    setIsNavigating(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', targetPage.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleGoToPage = (event: React.FormEvent) => {
+    event.preventDefault();
+    const targetPage = Number(goToPage);
+    if (!meta || !Number.isInteger(targetPage) || targetPage < 1 || targetPage > meta.total_pages) return;
+    setIsGoToPageOpen(false);
+    handlePageChange(targetPage);
+  };
+
+  const openGoToPage = () => {
+    setGoToPage(meta?.current_page.toString() || '1');
+    setIsGoToPageOpen(true);
+  };
+
+  const getPageNumbers = () => {
+    if (!meta) return [];
+    const pages = new Set<number>();
+    pages.add(1);
+    pages.add(meta.total_pages);
+    for (let page = meta.current_page - 1; page <= meta.current_page + 1; page += 1) {
+      if (page > 1 && page < meta.total_pages) pages.add(page);
+    }
+    return [...pages].sort((a, b) => a - b);
   };
 
   const handleStartChat = (userId: number) => {
     startTransition(() => {
       startDirectConversationAction(userId);
     });
-  };
-
-  const getPageNumbers = () => {
-    if (!meta) return [];
-    const { current_page, total_pages } = meta;
-    const pages: (number | string)[] = [];
-    
-    // Always show first page, last page, and 1 page before/after current
-    
-    if (total_pages <= 7) {
-      for (let i = 1; i <= total_pages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      
-      if (current_page > 3) {
-        pages.push('...');
-      }
-      
-      let start = Math.max(2, current_page - 1);
-      let end = Math.min(total_pages - 1, current_page + 1);
-      
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      
-      if (current_page < total_pages - 2) {
-        pages.push('...');
-      }
-      
-      pages.push(total_pages);
-    }
-    
-    return pages;
   };
 
   return (
@@ -149,48 +166,98 @@ export function UsersList({
         ))}
       </div>
 
-      {meta && meta.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
-          <AnimatedButton
-            variant="secondary"
-            onClick={() => handlePageChange(meta.current_page - 1)}
-            disabled={meta.current_page === 1 || isNavigating}
-            className="px-4 py-2"
-          >
-            Prev
-          </AnimatedButton>
-          
-          <div className="flex gap-1 mx-2 flex-wrap justify-center">
-            {getPageNumbers().map((pageNum, index) => (
-              pageNum === '...' ? (
-                <span key={`ellipsis-${index}`} className="w-10 h-10 flex items-center justify-center text-white/50">
-                  ...
-                </span>
-              ) : (
+      {meta && (
+        <div className="flex flex-col items-center gap-3 mt-8">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <AnimatedButton
+              variant="secondary"
+              onClick={() => handlePageChange(meta.current_page - 1)}
+              disabled={!meta.has_previous || isNavigating}
+              className="px-4 py-2"
+            >
+              Prev
+            </AnimatedButton>
+
+            {getPageNumbers().map((pageNumber, index, pages) => (
+              <React.Fragment key={pageNumber}>
+                {index > 0 && pageNumber - pages[index - 1] > 1 && (
+                  <button
+                    type="button"
+                    onClick={openGoToPage}
+                    className="min-w-10 h-10 px-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    aria-label="Go to page"
+                  >
+                    …
+                  </button>
+                )}
                 <button
-                  key={`page-${pageNum}`}
-                  onClick={() => handlePageChange(pageNum as number)}
+                  type="button"
+                  onClick={() => handlePageChange(pageNumber)}
                   disabled={isNavigating}
-                  className={`min-w-10 px-2 h-10 rounded-xl flex items-center justify-center font-medium transition-colors ${
-                    pageNum === meta.current_page
+                  className={`min-w-10 h-10 px-2 rounded-xl font-medium transition-colors ${
+                    pageNumber === meta.current_page
                       ? 'bg-brand-500 text-white'
                       : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  {pageNum}
+                  {pageNumber.toLocaleString()}
                 </button>
-              )
+              </React.Fragment>
             ))}
-          </div>
 
-          <AnimatedButton
-            variant="secondary"
-            onClick={() => handlePageChange(meta.current_page + 1)}
-            disabled={!meta.has_next || isNavigating}
-            className="px-4 py-2"
+            <AnimatedButton
+              variant="secondary"
+              onClick={() => handlePageChange(meta.current_page + 1)}
+              disabled={!meta.has_next || isNavigating}
+              className="px-4 py-2"
+            >
+              Next
+            </AnimatedButton>
+          </div>
+        </div>
+      )}
+
+      {meta && isGoToPageOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsGoToPageOpen(false)}
+            aria-label="Close go to page dialog"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="go-to-page-title"
+            className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-[#151515] p-6 shadow-2xl"
           >
-            Next
-          </AnimatedButton>
+            <h3 id="go-to-page-title" className="text-lg font-semibold text-white">
+              Go to page
+            </h3>
+            <p className="mt-1 text-sm text-white/50">
+              Enter a page from 1 to {meta.total_pages.toLocaleString()}.
+            </p>
+
+            <form onSubmit={handleGoToPage} className="mt-5 flex gap-3">
+              <input
+                type="number"
+                min={1}
+                max={meta.total_pages}
+                value={goToPage}
+                onChange={(event) => setGoToPage(event.target.value)}
+                autoFocus
+                className="min-w-0 flex-1 h-11 rounded-xl bg-white/5 border border-white/10 px-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <AnimatedButton
+                type="submit"
+                disabled={isNavigating || !goToPage}
+                className="h-11 px-5 py-2"
+              >
+                Go
+              </AnimatedButton>
+            </form>
+          </div>
         </div>
       )}
       
