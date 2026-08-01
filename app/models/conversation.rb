@@ -26,6 +26,12 @@ class Conversation < ApplicationRecord
     end
   end
 
+  def last_message
+    return if last_message_at.nil?
+
+    messages.includes(:user).order(id: :desc).first
+  end
+
   private
 
   def acceptable_avatar
