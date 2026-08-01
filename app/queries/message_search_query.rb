@@ -21,13 +21,15 @@ class MessageSearchQuery
     base_scope
       .where("searchable @@ to_tsquery('simple', :q)", q: tsquery)
       .select("messages.*", snippet_select(tsquery))
-      .order(created_at: :desc)
+      .order(created_at: :desc, id: :desc)
   end
 
   private
 
   def base_scope
     Message
+      .active
+      .where(message_type: "user")
       .joins(:conversation)
       .where(conversations: { id: @conversations.select(:id) })
   end

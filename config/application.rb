@@ -1,4 +1,5 @@
 require_relative "boot"
+require_relative "../lib/jwt_error_handler"
 
 require "rails/all"
 
@@ -10,6 +11,7 @@ module Messenger
     config.api_only = true
 
     # Add Rack::Attack
+    config.middleware.insert_before 0, JwtErrorHandler
     config.middleware.use Rack::Attack
     config.autoload_lib(ignore: %w[assets tasks])
     config.active_storage.variant_processor = :vips

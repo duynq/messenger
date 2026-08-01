@@ -8,7 +8,11 @@ RSpec.describe User, type: :model do
   end
 
   describe "associations" do
-    it { should have_many(:posts).dependent(:destroy) }
+    it { should have_many(:conversation_participants).dependent(:destroy) }
+    it { should have_many(:conversations).through(:conversation_participants) }
+    it { should have_many(:messages).dependent(:destroy) }
+    it { should have_many(:notifications).dependent(:destroy) }
+    it { should have_many(:push_subscriptions).dependent(:destroy) }
   end
 
   describe "#full_name" do

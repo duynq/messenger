@@ -5,23 +5,36 @@ class MessageSearchService
 
   def initialize(user:, query:, conversation_id: nil, page: 1, per_page: 20, use_elasticsearch: true)
     @user = user
-    @query = query
-    @conversation_id = conversation_id
-    @page = page
-    @per_page = per_page
-    @use_elasticsearch = use_elasticsearch && elasticsearch_available?
+    @query = query.to_s.strip
+    @conversation_filter_present = conversation_id.present?
+    @conversation_id = normalize_conversation_id(conversation_id)
+    @page = [page.to_i, 1].max
+    @per_page = [[per_page.to_i, 1].max, 100].min
+    @use_elasticsearch = @query.present? && use_elasticsearch && elasticsearch_available?
   end
 
   def call
     return empty_result if @query.blank?
 
-    @use_elasticsearch ? elasticsearch_search : postgresql_search
+    return postgresql_search unless @use_elasticsearch
+
+    elasticsearch_search_with_fallback
   end
 
   private
 
+  def elasticsearch_search_with_fallback
+    elasticsearch_search
+  rescue StandardError => error
+    Rails.logger.warn(
+      "Message search failed with Elasticsearch; falling back to PostgreSQL: " \
+      "#{error.class}: #{error.message}"
+    )
+    postgresql_search
+  end
+
   def empty_result
-    { messages: [], meta: { has_next: false } }
+    response(messages: [], current_page: @page, total_pages: 0, total_count: 0)
   end
 
   def elasticsearch_search
@@ -41,47 +54,38 @@ class MessageSearchService
     )
   end
 
-  def target_conversation_ids
-    @conversation_id.present? ? [@conversation_id] : @user.conversation_ids
-  end
-
   def format_es_response(results)
+    pairs = results.with_highlights(multiple: true).to_a
+    snippets = pairs.to_h do |message, highlights|
+      content_highlights = highlights[:content] || highlights["content"]
+      [message.id, Array(content_highlights).presence&.join(" ... ")]
+    end
+
     {
-      messages: format_messages(results),
-      meta: pagination_meta(results)
+      messages: MessageSearchPresenter.format_messages(pairs.map(&:first), snippets: snippets),
+      meta: pagination_meta(
+        current_page: results.current_page,
+        total_pages: results.total_pages,
+        total_count: results.total_count
+      )
     }
   end
 
-  def format_messages(results)
-    results.with_highlights(multiple: true).map do |message, highlights|
-      format_single_message(message, highlights)
-    end
-  end
-
-  def format_single_message(message, highlights)
-    formatted = MessageBlueprint.render_as_hash(message, view: :extended)
-    formatted[:search_highlights] = highlights[:content]&.join(" ... ")
-    formatted
-  end
-
   def postgresql_search
-    pagy_obj, records = paginate_pg_records
+    pagy_obj, records, total_count = paginate_pg_records
     preload_associations(records)
-    format_pg_response(pagy_obj, records)
-  rescue Pagy::OverflowError
-    empty_result
+    format_pg_response(pagy_obj, records, total_count)
   end
 
   def paginate_pg_records
     messages_scope = MessageSearchQuery.new(pg_conversations_scope).search(@query)
-    pagy_obj = Pagy.new(count: messages_scope.count, page: @page, items: @per_page)
-    records = messages_scope.offset(pagy_obj.offset).limit(pagy_obj.items)
-    [pagy_obj, records]
-  end
+    total_count = messages_scope.unscope(:select, :order).count
+    total_pages = pages_for(total_count)
+    return [nil, messages_scope.none, total_count] if total_count.zero? || @page > total_pages
 
-  def pg_conversations_scope
-    scope = @user.conversations
-    @conversation_id.present? ? scope.where(id: @conversation_id) : scope
+    pagy_obj = Pagy.new(count: total_count, page: @page, limit: @per_page)
+    records = messages_scope.offset(pagy_obj.offset).limit(pagy_obj.limit)
+    [pagy_obj, records, total_count]
   end
 
   def preload_associations(records)
@@ -91,42 +95,75 @@ class MessageSearchService
     ).call
   end
 
-  def format_pg_response(pagy_obj, records)
+  def format_pg_response(pagy_obj, records, total_count)
+    total_pages = pages_for(total_count)
+
     {
-      messages: MessageSearchPresenter.format_messages(records, nil),
-      meta: pagination_meta(pagy_obj)
+      messages: MessageSearchPresenter.format_messages(records),
+      meta: pagination_meta(
+        current_page: @page,
+        total_pages: pagy_obj&.pages || total_pages,
+        total_count: total_count
+      )
     }
   end
 
-  def pagination_meta(results)
+  def response(messages:, current_page:, total_pages:, total_count:)
     {
-      current_page: results.try(:current_page) || results.page,
-      total_pages: results.try(:total_pages) || results.pages,
-      total_count: results.try(:total_count) || results.count,
-      has_next: next_page_exists?(results),
-      next_page: next_page_number(results)
+      messages: messages,
+      meta: pagination_meta(
+        current_page: current_page,
+        total_pages: total_pages,
+        total_count: total_count
+      )
     }
   end
 
-  def next_page_exists?(results)
-    if results.respond_to?(:current_page)
-      results.current_page < results.total_pages
-    else
-      results.next.present?
-    end
+  def pagination_meta(current_page:, total_pages:, total_count:)
+    has_next = current_page < total_pages
+
+    {
+      current_page: current_page,
+      total_pages: total_pages,
+      total_count: total_count,
+      has_next: has_next,
+      next_page: has_next ? current_page + 1 : nil
+    }
   end
 
-  def next_page_number(results)
-    if results.respond_to?(:current_page)
-      next_page_exists?(results) ? results.current_page + 1 : nil
-    else
-      results.next
-    end
+  def pages_for(total_count)
+    (total_count.to_f / @per_page).ceil
+  end
+
+  def normalize_conversation_id(value)
+    return if value.blank?
+
+    id = Integer(value, exception: false)
+    id if id&.positive?
+  end
+
+  def authorized_conversation_ids
+    scoped_conversations.ids
+  end
+
+  def target_conversation_ids
+    @target_conversation_ids ||= authorized_conversation_ids
+  end
+
+  def pg_conversations_scope
+    scoped_conversations
+  end
+
+  def scoped_conversations
+    return @user.conversations unless @conversation_filter_present
+    return @user.conversations.none unless @conversation_id
+
+    @user.conversations.where(id: @conversation_id)
   end
 
   def elasticsearch_available?
     Searchkick.client.ping
-  rescue
+  rescue StandardError
     false
   end
 end

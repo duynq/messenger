@@ -1,7 +1,7 @@
 class MessageBlueprint < Blueprinter::Base
   identifier :id
 
-  fields :created_at, :edited_at, :message_type, :metadata
+  fields :created_at, :edited_at, :message_type, :metadata, :user_id
 
   field :deleted do |message, _|
     message.deleted?

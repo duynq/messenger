@@ -1,8 +1,13 @@
 require "spec_helper"
-ENV["RAILS_ENV"] ||= "test"
+ENV["RAILS_ENV"] = "test"
+if ENV["TEST_DATABASE_URL"] && !ENV["TEST_DATABASE_URL"].empty?
+  ENV["DATABASE_URL"] = ENV["TEST_DATABASE_URL"]
+elsif ENV["DATABASE_URL"]&.include?("_development")
+  ENV["DATABASE_URL"] = ENV["DATABASE_URL"].sub(/_development(?=\?|$)/, "_test")
+end
 require_relative "../config/environment"
 
-abort("The Rails environment is running in production mode!") if Rails.env.production?
+abort("RSpec must run in the test environment!") unless Rails.env.test?
 require "rspec/rails"
 require "shoulda/matchers"
 

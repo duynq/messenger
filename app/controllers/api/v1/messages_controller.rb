@@ -1,6 +1,8 @@
 module Api
   module V1
     class MessagesController < ApplicationController
+      wrap_parameters false
+
       before_action :authenticate_user!
       before_action :set_conversation
       before_action :set_message, only: [:destroy, :update, :react]
