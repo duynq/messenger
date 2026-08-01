@@ -1,6 +1,7 @@
 ---
 :concurrency: 5
 :queues:
+  - searchkick
   - default
   - notifications
   - mailers

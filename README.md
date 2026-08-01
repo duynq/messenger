@@ -105,7 +105,7 @@ After seeding the database, you can log in with:
 
 ### Backend
 ```bash
-docker compose exec web bundle exec rspec
+docker compose exec web bin/rspec
 ```
 
 ### Frontend

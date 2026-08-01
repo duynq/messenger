@@ -1,7 +1,7 @@
 class MessageSearchPresenter
-  def initialize(message, view_context)
+  def initialize(message, snippet: nil)
     @message = message
-    @view_context = view_context
+    @snippet = snippet || message.attributes["snippet"]
   end
 
   def as_json(*)
@@ -9,7 +9,7 @@ class MessageSearchPresenter
       id: @message.id,
       conversation_id: @message.conversation_id,
       content: @message.content,
-      snippet: @message.attributes['snippet'],
+      snippet: @snippet,
       created_at: @message.created_at,
       user: {
         id: @message.user.id,
@@ -20,7 +20,7 @@ class MessageSearchPresenter
     }
   end
 
-  def self.format_messages(messages, view_context)
-    messages.map { |msg| new(msg, view_context).as_json }
+  def self.format_messages(messages, snippets: {})
+    messages.map { |message| new(message, snippet: snippets[message.id]).as_json }
   end
 end
