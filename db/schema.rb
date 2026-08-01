@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_01_045317) do
+ActiveRecord::Schema[7.1].define(version: 2026_08_01_053000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -99,6 +99,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_01_045317) do
     t.string "message_type", default: "user", null: false
     t.jsonb "metadata", default: {}
     t.virtual "searchable", type: :tsvector, as: "to_tsvector('simple'::regconfig, COALESCE(content, ''::text))", stored: true
+    t.index ["conversation_id", "id"], name: "index_messages_on_conversation_id_and_id", order: { id: :desc }
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["deleted_at"], name: "index_messages_on_deleted_at"
@@ -169,9 +170,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_01_045317) do
     t.jsonb "notification_preferences", default: {"types"=>{"mention"=>true, "new_message"=>true, "group_renamed"=>true, "added_to_group"=>true, "admin_transferred"=>true, "removed_from_group"=>true}, "channels"=>{"email"=>false, "in_app"=>true, "web_push"=>true}, "quiet_hours"=>nil, "email_digest"=>"none"}
     t.index ["created_at", "id"], name: "index_users_on_created_at_and_id"
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["email"], name: "index_users_on_email_trigram", opclass: :gin_trgm_ops, using: :gin
-    t.index ["first_name"], name: "index_users_on_first_name", opclass: :gin_trgm_ops, using: :gin
-    t.index ["last_name"], name: "index_users_on_last_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 

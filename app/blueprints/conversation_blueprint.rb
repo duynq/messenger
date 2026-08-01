@@ -10,7 +10,7 @@ class ConversationBlueprint < Blueprinter::Base
   end
 
   field :last_message do |conversation, _options|
-    msg = conversation.messages.includes(:user).order(id: :desc).first
+    msg = conversation.last_message
     if msg
       {
         content: msg.deleted? ? nil : (msg.system? ? '[System]' : msg.content.to_s.truncate(50)),
