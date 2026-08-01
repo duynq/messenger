@@ -8,13 +8,14 @@ class UserSearchService
     new(**args).call
   end
 
-  def initialize(user:, query: "", cursor: nil, page: nil, per_page: 20, use_elasticsearch: true)
+  def initialize(user:, query: "", cursor: nil, page: nil, per_page: 20, use_elasticsearch: true, include_total_count: true)
     @user = user
     @query = query
     @cursor = decode_cursor(cursor)
     @requested_page = page.present? ? [page.to_i, 1].max : (@cursor&.fetch("page", 1).to_i)
     @per_page = per_page
     @use_elasticsearch = use_elasticsearch && elasticsearch_available?
+    @include_total_count = include_total_count
   end
 
   def call
@@ -30,6 +31,8 @@ class UserSearchService
     direction = cursor&.fetch("direction") || "next"
     results = perform_es_query(cursor, direction)
     pairs = results.with_hit.to_a
+    return lightweight_es_response(pairs, cursor, direction, source) unless @include_total_count
+
     pairs = pairs.first(@per_page)
     pairs.reverse! if direction == "previous"
 
@@ -45,7 +48,7 @@ class UserSearchService
     order = direction == "previous" ? :desc : :asc
     body_options = {}
     body_options[:search_after] = [cursor.fetch("value")] if cursor
-    body_options[:track_total_hits] = true
+    body_options[:track_total_hits] = @include_total_count
 
     pagination = if cursor
       { limit: @per_page + 1 }
@@ -68,6 +71,8 @@ class UserSearchService
     source_cursor = cursor_for(source)
     cursor = navigation_cursor(source_cursor)
     direction = cursor&.fetch("direction") || "next"
+    return lightweight_pg_response(cursor, direction, source) unless @include_total_count
+
     total_count = source_cursor&.fetch("total_count") || total_pg_count
     current_page = normalized_page(@requested_page, total_count)
     records = paginate_pg_records(cursor, direction, current_page)
@@ -94,6 +99,34 @@ class UserSearchService
     records = scope.order(id: order).limit(@per_page).to_a
     records.reverse! if direction == "previous"
     records
+  end
+
+  def lightweight_pg_response(cursor, direction, source)
+    scope = build_pg_scope
+    if cursor
+      operator = direction == "previous" ? "<" : ">"
+      scope = scope.where("users.id #{operator} ?", cursor.fetch("value").to_i)
+    end
+
+    order = direction == "previous" ? :desc : :asc
+    records = scope.order(id: order).limit(@per_page + 1).to_a
+    has_more = records.length > @per_page
+    records = records.first(@per_page)
+    records.reverse! if direction == "previous"
+    preload_associations(records)
+
+    values = records.map(&:id)
+    format_response(records, lightweight_cursor_meta(values, direction, cursor.present?, has_more, source))
+  end
+
+  def lightweight_es_response(pairs, cursor, direction, source)
+    has_more = pairs.length > @per_page
+    pairs = pairs.first(@per_page)
+    pairs.reverse! if direction == "previous"
+
+    records = pairs.map(&:first)
+    values = pairs.map { |_, hit| hit.fetch("sort").first }
+    format_response(records, lightweight_cursor_meta(values, direction, cursor.present?, has_more, source))
   end
 
   def build_pg_scope
@@ -136,6 +169,21 @@ class UserSearchService
       has_next: has_next,
       previous_cursor: has_previous && values.any? ? encode_cursor("previous", values.first, source, current_page - 1, total_count) : nil,
       next_cursor: has_next && values.any? ? encode_cursor("next", values.last, source, current_page + 1, total_count) : nil
+    }
+  end
+
+  def lightweight_cursor_meta(values, direction, has_cursor, has_more, source)
+    has_previous = direction == "previous" ? has_more : has_cursor
+    has_next = direction == "previous" ? has_cursor : has_more
+
+    {
+      current_page: @requested_page,
+      total_pages: nil,
+      total_count: nil,
+      has_previous: has_previous,
+      has_next: has_next,
+      previous_cursor: has_previous && values.any? ? encode_cursor("previous", values.first, source, @requested_page - 1, nil) : nil,
+      next_cursor: has_next && values.any? ? encode_cursor("next", values.last, source, @requested_page + 1, nil) : nil
     }
   end
 

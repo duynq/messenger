@@ -4,11 +4,16 @@ import { z } from 'zod';
 import { serverFetch, handleUnauthorized } from '@/lib/server-api';
 import { redirect } from 'next/navigation';
 
-export async function fetchUsersAction(cursor?: string | null, q?: string) {
+export async function fetchUsersAction(
+  cursor?: string | null,
+  q?: string,
+  options: { includeTotal?: boolean } = {},
+) {
   try {
     const params = new URLSearchParams();
     if (cursor) params.set('cursor', cursor);
     if (q) params.set('q', q);
+    if (options.includeTotal === false) params.set('include_total', 'false');
     const url = `/users?${params.toString()}`;
     const response = await serverFetch(url, {
       method: 'GET',
@@ -23,6 +28,49 @@ export async function fetchUsersAction(cursor?: string | null, q?: string) {
 
     return await response.json();
   } catch (error) {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
+export async function fetchConversationMessagesAction(
+  conversationId: number,
+  beforeMessageId: number,
+) {
+  if (!Number.isInteger(conversationId) || conversationId <= 0
+    || !Number.isInteger(beforeMessageId) || beforeMessageId <= 0) {
+    return { error: 'Invalid message pagination parameters' };
+  }
+
+  try {
+    const response = await serverFetch(
+      `/conversations/${conversationId}/messages?before_message_id=${beforeMessageId}`,
+      { method: 'GET', cache: 'no-store' },
+    );
+
+    await handleUnauthorized(response);
+    if (!response.ok) return { error: 'Failed to load older messages' };
+
+    return await response.json();
+  } catch {
+    return { error: 'Unexpected error occurred' };
+  }
+}
+
+export async function markConversationReadAction(conversationId: number) {
+  if (!Number.isInteger(conversationId) || conversationId <= 0) {
+    return { error: 'Invalid conversation' };
+  }
+
+  try {
+    const response = await serverFetch(`/conversations/${conversationId}/read`, {
+      method: 'PATCH',
+    });
+
+    await handleUnauthorized(response);
+    if (!response.ok) return { error: 'Failed to mark conversation as read' };
+
+    return { success: true };
+  } catch {
     return { error: 'Unexpected error occurred' };
   }
 }

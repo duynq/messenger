@@ -15,7 +15,8 @@ module Api
           cursor: params[:cursor],
           page: page,
           per_page: per_page,
-          use_elasticsearch: use_es
+          use_elasticsearch: use_es,
+          include_total_count: params[:include_total] != "false"
         )
 
         render json: result, status: :ok

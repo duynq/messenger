@@ -18,6 +18,7 @@ Rails.application.routes.draw do
       # Dashboard
 
       get "dashboard", to: "dashboard#index"
+      resource :cable_ticket, only: :create
 
       # Users List
       resources :users, only: [:index]

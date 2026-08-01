@@ -1,7 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { createConsumer } from '@rails/actioncable';
+import { usePathname } from 'next/navigation';
+import { useCable } from '@/components/providers/CableProvider';
+import { activeConversationId, isNotificationForConversation } from '@/lib/notifications';
 import {
   fetchNotificationsAction,
   markNotificationReadAction,
@@ -33,15 +35,13 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
-interface NotificationProviderProps {
-  token?: string;
-  children: React.ReactNode;
-}
-
-export function NotificationProvider({ token, children }: NotificationProviderProps) {
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const cable = useCable();
+  const pathname = usePathname();
+  const currentConversationId = activeConversationId(pathname);
 
   // Fetch initial notifications
   useEffect(() => {
@@ -63,14 +63,9 @@ export function NotificationProvider({ token, children }: NotificationProviderPr
 
   // WebSocket subscription
   useEffect(() => {
-    if (!token) return;
+    if (!cable) return;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-    const wsUrl = apiUrl.replace('http', 'ws').replace('/api/v1', '') + '/cable?token=' + token;
-
-    const consumer = createConsumer(wsUrl);
-
-    const subscription = consumer.subscriptions.create('NotificationChannel', {
+    const subscription = cable.subscriptions.create('NotificationChannel', {
       received(data: Record<string, unknown>) {
         switch (data.type) {
           case 'snapshot':
@@ -79,18 +74,15 @@ export function NotificationProvider({ token, children }: NotificationProviderPr
 
           case 'notification': {
             const notif = data.notification as Notification;
-            const notifData = notif.data as Record<string, string>;
-
-            // Check if user is currently active in the conversation that triggered the notification
-            const isViewingConversation = notifData.conversation_id &&
-              window.location.pathname.includes(`/chat/${notifData.conversation_id}`);
+            const isViewingConversation = isNotificationForConversation(
+              notif,
+              currentConversationId,
+            );
 
             if (isViewingConversation) {
-              // Silently mark as read since user is already looking at it
-              notif.read_at = new Date().toISOString();
-              setNotifications(prev => [notif, ...prev]);
+              const readNotification = { ...notif, read_at: new Date().toISOString() };
+              setNotifications(prev => [readNotification, ...prev]);
 
-              // Trigger backend to mark it as read asynchronously
               markNotificationReadAction(notif.id).catch(console.error);
             } else {
               setNotifications(prev => [notif, ...prev]);
@@ -123,6 +115,17 @@ export function NotificationProvider({ token, children }: NotificationProviderPr
             setUnreadCount(0);
             break;
 
+          case 'notifications_read': {
+            const notificationIds = new Set(data.notification_ids as number[]);
+            setNotifications(prev => prev.map(notification =>
+              notificationIds.has(notification.id)
+                ? { ...notification, read_at: notification.read_at || new Date().toISOString() }
+                : notification
+            ));
+            setUnreadCount(data.unread_count as number);
+            break;
+          }
+
           case 'unread_count_updated':
             setUnreadCount(data.count as number);
             break;
@@ -132,9 +135,8 @@ export function NotificationProvider({ token, children }: NotificationProviderPr
 
     return () => {
       subscription.unsubscribe();
-      consumer.disconnect();
     };
-  }, [token]);
+  }, [cable, currentConversationId]);
 
   const markAsRead = useCallback(async (id: number) => {
     await markNotificationReadAction(id);

@@ -30,20 +30,19 @@ interface GroupSettingsModalProps {
   onClose: () => void;
   conversation: GroupConversation;
   currentUser: { id?: number; email: string };
-  availableUsers: { id: number; full_name: string; email: string }[];
   isMuted: boolean;
   onMuteToggle: () => void;
   isMuteLoading: boolean;
 }
 
-export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser, availableUsers, isMuted, onMuteToggle, isMuteLoading }: GroupSettingsModalProps) {
+export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser, isMuted, onMuteToggle, isMuteLoading }: GroupSettingsModalProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedUserToAdd, setSelectedUserToAdd] = useState<number | ''>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const [usersList, setUsersList] = useState(availableUsers);
+  const [usersList, setUsersList] = useState<ConversationUser[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -60,26 +59,39 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
   const usersToAdd = usersList.filter(u => !currentMemberIds.includes(u.id));
 
   React.useEffect(() => {
-    if (debouncedSearchQuery.length >= 2 || debouncedSearchQuery.length === 0) {
-      setIsLoadingMore(true);
-      const fetchInitial = async () => {
-        try {
-          const { fetchUsersAction } = await import('@/actions/chat');
-          const data = await fetchUsersAction(null, debouncedSearchQuery);
-          if (data.users) {
-            setUsersList(data.users);
-            setNextCursor(data.meta?.next_cursor ?? null);
-            setHasMore(data.meta?.has_next ?? false);
-          }
-        } catch (error) {
-          console.error("Failed to fetch users", error);
-        } finally {
-          setIsLoadingMore(false);
-        }
-      };
-      fetchInitial();
+    if (!isOpen || !isDropdownOpen) return;
+    if (debouncedSearchQuery.length === 1) {
+      setUsersList([]);
+      setNextCursor(null);
+      setHasMore(false);
+      setIsLoadingMore(false);
+      return;
     }
-  }, [debouncedSearchQuery]);
+
+    let cancelled = false;
+    setIsLoadingMore(true);
+
+    const fetchInitial = async () => {
+      try {
+        const { fetchUsersAction } = await import('@/actions/chat');
+        const data = await fetchUsersAction(null, debouncedSearchQuery, { includeTotal: false });
+        if (!cancelled && data.users) {
+          setUsersList(data.users);
+          setNextCursor(data.meta?.next_cursor ?? null);
+          setHasMore(data.meta?.has_next ?? false);
+        }
+      } catch (error) {
+        if (!cancelled) console.error("Failed to fetch users", error);
+      } finally {
+        if (!cancelled) setIsLoadingMore(false);
+      }
+    };
+
+    void fetchInitial();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchQuery, isDropdownOpen, isOpen]);
 
   const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -88,7 +100,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
       
       try {
         const { fetchUsersAction } = await import('@/actions/chat');
-        const data = await fetchUsersAction(nextCursor, debouncedSearchQuery);
+        const data = await fetchUsersAction(nextCursor, debouncedSearchQuery, { includeTotal: false });
         
         if (data.users && data.users.length > 0) {
           setUsersList(prev => {
@@ -351,7 +363,7 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
             </button>
           </div>
 
-          {isAdmin && usersToAdd.length > 0 && (
+          {isAdmin && (
             <div className="mb-6">
               <label htmlFor="user-search-input" className="block text-sm font-medium text-white/70 mb-2">Add Member</label>
               <div className="flex gap-2">
@@ -391,7 +403,11 @@ export function GroupSettingsModal({ isOpen, onClose, conversation, currentUser,
                         className="overflow-y-auto p-1 flex-1 hide-scrollbar"
                         onScroll={handleScroll}
                       >
-                        {usersToAdd.length === 0 ? (
+                        {isLoadingMore && usersList.length === 0 ? (
+                          <div className="p-3 flex justify-center">
+                            <Loader2 className="w-4 h-4 text-white/50 animate-spin" />
+                          </div>
+                        ) : usersToAdd.length === 0 ? (
                           <div className="p-3 text-center text-xs text-white/40">No users found</div>
                         ) : (
                           <>

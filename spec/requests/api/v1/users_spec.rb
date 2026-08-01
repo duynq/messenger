@@ -31,7 +31,8 @@ RSpec.describe "Api::V1::Users", type: :request do
         cursor: nil,
         page: nil,
         per_page: 20,
-        use_elasticsearch: false
+        use_elasticsearch: false,
+        include_total_count: true
       )
     end
 
@@ -48,7 +49,27 @@ RSpec.describe "Api::V1::Users", type: :request do
           cursor: "opaque-cursor",
           page: nil,
           per_page: 20,
-          use_elasticsearch: false
+          use_elasticsearch: false,
+          include_total_count: true
+        )
+      end
+    end
+
+
+    context "when exact totals are disabled" do
+      let(:params) { { use_es: false, include_total: false } }
+
+      it "requests lightweight cursor pagination" do
+        request
+
+        expect(UserSearchService).to have_received(:call).with(
+          user: current_user,
+          query: "",
+          cursor: nil,
+          page: nil,
+          per_page: 20,
+          use_elasticsearch: false,
+          include_total_count: false
         )
       end
     end

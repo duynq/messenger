@@ -8,7 +8,7 @@ module Api
       def index
         return render_unauthorized unless @conversation.users.include?(Current.user)
 
-        update_last_read
+        mark_conversation_as_read unless params[:before_message_id].present?
         messages = fetch_messages.to_a
         render json: index_payload(messages), status: :ok
       end
@@ -53,18 +53,8 @@ module Api
         end
       end
 
-      def update_last_read
-        participant = @conversation.conversation_participants.find_by(user_id: Current.user.id)
-        if participant&.update(last_read_at: Time.current)
-          ActionCable.server.broadcast(
-            "conversation_#{@conversation.id}",
-            {
-              action: 'read_receipt',
-              user_id: Current.user.id,
-              last_read_at: participant.last_read_at
-            }
-          )
-        end
+      def mark_conversation_as_read
+        Conversations::MarkAsReadService.call(conversation: @conversation, user: Current.user)
       end
 
       def fetch_messages
