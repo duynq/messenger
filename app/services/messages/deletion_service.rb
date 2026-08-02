@@ -25,7 +25,7 @@ module Messages
     private
 
     def authorized?
-      @message.user_id == @user.id
+      MessagePolicy.new(@user, @message).destroy?
     end
 
     def unauthorized_error

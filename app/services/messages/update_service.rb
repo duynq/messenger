@@ -25,7 +25,7 @@ module Messages
     private
 
     def authorized?
-      @message.user_id == @user.id
+      MessagePolicy.new(@user, @message).update?
     end
 
     def time_limit_exceeded?
