@@ -10,13 +10,14 @@ class MessageSearchService
     @conversation_id = normalize_conversation_id(conversation_id)
     @page = [page.to_i, 1].max
     @per_page = [[per_page.to_i, 1].max, 100].min
-    @use_elasticsearch = @query.present? && use_elasticsearch && elasticsearch_available?
+    @use_elasticsearch = use_elasticsearch
   end
 
   def call
     return empty_result if @query.blank?
+    return empty_result if unauthorized_conversation_filter?
 
-    return postgresql_search unless @use_elasticsearch
+    return postgresql_search unless @use_elasticsearch && elasticsearch_available?
 
     elasticsearch_search_with_fallback
   end
@@ -142,12 +143,24 @@ class MessageSearchService
     id if id&.positive?
   end
 
-  def authorized_conversation_ids
-    scoped_conversations.ids
+  def unauthorized_conversation_filter?
+    @conversation_filter_present && authorized_conversation_id.nil?
+  end
+
+  def authorized_conversation_id
+    return @authorized_conversation_id if defined?(@authorized_conversation_id)
+
+    @authorized_conversation_id = if @conversation_id
+      @user.conversations.where(id: @conversation_id).pick(:id)
+    end
   end
 
   def target_conversation_ids
-    @target_conversation_ids ||= authorized_conversation_ids
+    @target_conversation_ids ||= if @conversation_filter_present
+      Array(authorized_conversation_id)
+    else
+      @user.conversation_ids
+    end
   end
 
   def pg_conversations_scope
@@ -156,9 +169,9 @@ class MessageSearchService
 
   def scoped_conversations
     return @user.conversations unless @conversation_filter_present
-    return @user.conversations.none unless @conversation_id
+    return @user.conversations.none unless authorized_conversation_id
 
-    @user.conversations.where(id: @conversation_id)
+    @user.conversations.where(id: authorized_conversation_id)
   end
 
   def elasticsearch_available?
