@@ -37,7 +37,7 @@ module Messages
     end
 
     def authorized?
-      @conversation.users.include?(@user)
+      MessagePolicy.new(@user, @conversation).create?
     end
 
     def valid_reply?

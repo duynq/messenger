@@ -1,15 +1,17 @@
 module Api
   module V1
     class MessagesController < ApplicationController
+      include MessageAuthorization
+
       wrap_parameters false
 
       before_action :authenticate_user!
-      before_action :set_conversation
-      before_action :set_message, only: [:destroy, :update, :react]
+      before_action :set_authorized_conversation
+      before_action :set_authorized_message, only: [:destroy, :update, :react]
+      after_action :verify_authorized
+      after_action :verify_policy_scoped
 
       def index
-        return render_unauthorized unless @conversation.users.include?(Current.user)
-
         mark_conversation_as_read unless params[:before_message_id].present?
         messages = fetch_messages.to_a
         render json: index_payload(messages), status: :ok
@@ -43,10 +45,6 @@ module Api
 
       private
 
-      def render_unauthorized
-        render json: { error: I18n.t('errors.unauthorized') }, status: :forbidden
-      end
-
       def render_service_result(result, success_status)
         if result.success?
           render json: yield(result.value), status: success_status
@@ -79,17 +77,6 @@ module Api
 
       def message_params
         params.require(:message).permit(:content, :reply_to_id, attachments: [])
-      end
-
-      def set_conversation
-        @conversation = Conversation.find(params[:conversation_id])
-      rescue ActiveRecord::RecordNotFound
-        render json: { error: I18n.t('errors.conversation_not_found') }, status: :not_found
-      end
-
-      def set_message
-        @message = @conversation.messages.find_by(id: params[:id])
-        return render json: { error: I18n.t('errors.message_not_found') }, status: :not_found unless @message
       end
     end
   end

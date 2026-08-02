@@ -16,6 +16,7 @@ gem "devise-jwt"
 gem "rack-cors"
 gem "blueprinter", "~> 1.3"
 gem "rack-attack", "~> 6.8"
+gem "pundit", "~> 2.3"
 
 # Active Storage with S3 (MinIO)
 gem "aws-sdk-s3", "~> 1.0", require: false

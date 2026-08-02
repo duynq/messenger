@@ -2,6 +2,7 @@ require 'pagy/backend'
 
 class ApplicationController < ActionController::API
   include Pagy::Backend
+  include Pundit::Authorization
   before_action :configure_permitted_parameters, if: :devise_controller?
   before_action :authenticate_user!
   before_action :set_locale
@@ -14,8 +15,17 @@ class ApplicationController < ActionController::API
   rescue_from ActiveRecord::RecordInvalid, with: :record_invalid
   rescue_from ArgumentError, with: :argument_error
   rescue_from ActionController::ParameterMissing, with: :parameter_missing
+  rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
 
   protected
+
+  def pundit_user
+    Current.user
+  end
+
+  def user_not_authorized
+    render json: { error: I18n.t("errors.unauthorized") }, status: :forbidden
+  end
 
   def set_locale
     header_locale = request.headers['Accept-Language']&.split(',')&.first&.split('-')&.first

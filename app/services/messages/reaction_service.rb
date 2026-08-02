@@ -11,6 +11,7 @@ module Messages
     end
 
     def call
+      return unauthorized_error unless authorized?
       return invalid_emoji_error unless valid_emoji?
 
       toggle_reaction
@@ -21,6 +22,10 @@ module Messages
     end
 
     private
+
+    def authorized?
+      MessagePolicy.new(@user, @message).react?
+    end
 
     def valid_emoji?
       MessageReaction::ALLOWED_EMOJIS.include?(@emoji)
@@ -59,6 +64,10 @@ module Messages
 
     def invalid_emoji_error
       Result.failure(error_payload('Invalid emoji', :unprocessable_entity))
+    end
+
+    def unauthorized_error
+      Result.failure(error_payload(I18n.t("errors.unauthorized"), :forbidden))
     end
 
     def error_payload(msg, status)
